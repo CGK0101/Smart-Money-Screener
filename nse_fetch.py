@@ -106,12 +106,27 @@ def load_history(max_days: int = 300) -> pd.DataFrame:
 
 # ------------------------------------------------------------------ events
 def _api_get(session, url, params) -> list | dict | None:
-    try:
-        r = session.get(url, params=params, timeout=30)
-        if r.status_code == 200:
-            return r.json()
-    except (requests.RequestException, ValueError) as e:
-        print(f"[warn] api {url}: {e}")
+    """NSE's www APIs are behind anti-bot protection that sometimes serves an
+    HTML block page (=> JSON parse error) especially to cloud IPs. Retry once
+    with a fresh cookie warm-up before giving up gracefully."""
+    for attempt in (1, 2):
+        try:
+            r = session.get(url, params=params, timeout=30,
+                            headers={"Accept": "application/json, text/plain, */*",
+                                     "X-Requested-With": "XMLHttpRequest"})
+            if r.status_code == 200:
+                return r.json()
+            print(f"[warn] api {url}: HTTP {r.status_code} (attempt {attempt})")
+        except (requests.RequestException, ValueError) as e:
+            print(f"[warn] api {url}: {e} (attempt {attempt})")
+        if attempt == 1:
+            try:  # fresh warm-up, then retry
+                time.sleep(3)
+                session.get("https://www.nseindia.com/market-data/large-deals",
+                            timeout=15)
+                time.sleep(2)
+            except requests.RequestException:
+                pass
     return None
 
 
