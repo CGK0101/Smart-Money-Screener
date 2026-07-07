@@ -217,3 +217,89 @@ def load_events() -> dict:
         out[name] = pd.read_csv(p) if os.path.exists(p) and os.path.getsize(p) > 2 \
             else pd.DataFrame()
     return out
+
+
+# ------------------------------------------------------- F&O OI (Tier 2)
+def fetch_fo_oi(d: dt.date, session=None) -> pd.DataFrame:
+    """Stock-futures open interest from the F&O bhavcopy (UDiFF format) on
+    the same archive server as the equity bhavcopy. Returns per-symbol OI
+    and day-on-day OI change %. Empty frame on any failure."""
+    import re as _re
+    s = session or _session()
+    url = ("https://nsearchives.nseindia.com/content/fo/"
+           f"BhavCopy_NSE_FO_0_0_0_{d.strftime('%Y%m%d')}_F_0000.csv.zip")
+    try:
+        r = s.get(url, timeout=60)
+        if r.status_code != 200 or len(r.content) < 1000:
+            print(f"[warn] fo bhavcopy {d}: HTTP {r.status_code}")
+            return pd.DataFrame()
+        df = pd.read_csv(io.BytesIO(r.content), compression="zip",
+                         low_memory=False)
+        df.columns = [str(c).strip() for c in df.columns]
+        typ = next((c for c in df.columns
+                    if _re.fullmatch(r"(?i)fininstrmtp", c)), None)
+        sym = next((c for c in df.columns
+                    if _re.fullmatch(r"(?i)tckrsymb", c)), None)
+        oi = next((c for c in df.columns
+                   if _re.fullmatch(r"(?i)opnintrst", c)), None)
+        chg = next((c for c in df.columns
+                    if _re.fullmatch(r"(?i)chnginopnintrst", c)), None)
+        if not all([typ, sym, oi, chg]):
+            print("[warn] fo bhavcopy: unexpected columns")
+            return pd.DataFrame()
+        fut = df[df[typ].astype(str).str.upper() == "STF"]
+        g = fut.groupby(fut[sym].astype(str).str.strip().str.upper()).agg(
+            oi=(oi, "sum"), oi_chg=(chg, "sum")).reset_index(names="SYMBOL")
+        prev = g["oi"] - g["oi_chg"]
+        g["oi_chg_pct"] = (g["oi_chg"] / prev.replace(0, pd.NA) * 100)
+        g["oi_chg_pct"] = pd.to_numeric(g["oi_chg_pct"],
+                                        errors="coerce").round(1)
+        print(f"[info] fo OI: {len(g)} stock futures")
+        os.makedirs(EVENTS_DIR, exist_ok=True)
+        g.to_csv(os.path.join(EVENTS_DIR, "fo_oi.csv"), index=False)
+        return g
+    except Exception as e:  # noqa: BLE001
+        print(f"[warn] fo bhavcopy {d}: {e}")
+        return pd.DataFrame()
+
+
+# ------------------------------------------------------- sector map (Tier 2)
+SECTOR_PATH = os.path.join(DATA_DIR, "sector_map.csv")
+
+
+def fetch_sector_map(session=None) -> pd.DataFrame:
+    """Nifty-500 symbol -> industry map. Cached, refreshed weekly.
+    Covers the large/mid/smallcap names that matter; symbols outside the
+    Nifty 500 simply show no sector. Empty frame if all sources fail."""
+    if os.path.exists(SECTOR_PATH):
+        age = dt.date.today() - dt.date.fromtimestamp(
+            os.path.getmtime(SECTOR_PATH))
+        if age.days < 7:
+            return pd.read_csv(SECTOR_PATH)
+    s = session or _session()
+    urls = [
+        "https://nsearchives.nseindia.com/content/indices/ind_nifty500list.csv",
+        "https://niftyindices.com/IndexConstituent/ind_nifty500list.csv",
+    ]
+    for u in urls:
+        try:
+            r = s.get(u, timeout=30)
+            if r.status_code == 200 and len(r.content) > 1000:
+                df = pd.read_csv(io.BytesIO(r.content))
+                df.columns = [str(c).strip() for c in df.columns]
+                symc = next((c for c in df.columns if c.lower() == "symbol"),
+                            None)
+                indc = next((c for c in df.columns
+                             if "industry" in c.lower()), None)
+                if symc and indc:
+                    out = df[[symc, indc]].rename(
+                        columns={symc: "SYMBOL", indc: "SECTOR"})
+                    out["SYMBOL"] = out["SYMBOL"].astype(str).str.strip()
+                    out.to_csv(SECTOR_PATH, index=False)
+                    print(f"[info] sector map: {len(out)} symbols from {u}")
+                    return out
+        except requests.RequestException as e:
+            print(f"[warn] sector map {u}: {e}")
+    if os.path.exists(SECTOR_PATH):  # stale cache better than nothing
+        return pd.read_csv(SECTOR_PATH)
+    return pd.DataFrame(columns=["SYMBOL", "SECTOR"])
