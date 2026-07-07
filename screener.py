@@ -139,6 +139,8 @@ def run_screen(history: pd.DataFrame, events: dict) -> dict:
         lambda s: s.rolling(C.LOOKBACK_AVG_DAYS, min_periods=15).mean())
     df["to20"] = g["TURNOVER_LACS"].transform(
         lambda s: s.rolling(C.LOOKBACK_AVG_DAYS, min_periods=15).mean())
+    df["sma21"] = g["CLOSE_PRICE"].transform(
+        lambda s: s.rolling(21, min_periods=15).mean())
     df["sma50"] = g["CLOSE_PRICE"].transform(
         lambda s: s.rolling(C.SMA_SHORT, min_periods=30).mean())
     df["sma200"] = g["CLOSE_PRICE"].transform(
@@ -162,7 +164,7 @@ def run_screen(history: pd.DataFrame, events: dict) -> dict:
                    values=["CLOSE_PRICE", "LOW_PRICE", "TTL_TRD_QNTY",
                            "DELIV_QTY", "DELIV_PER"])
     stats = full[full["rk"] == 1].set_index("SYMBOL")[
-        ["vol20", "dq20", "to20", "sma50", "sma200", "low52", "hi52",
+        ["vol20", "dq20", "to20", "sma21", "sma50", "sma200", "low52", "hi52",
          "TURNOVER_LACS", "NO_OF_TRADES"]]
 
     def col(m, k):
@@ -249,6 +251,33 @@ def run_screen(history: pd.DataFrame, events: dict) -> dict:
     out["score"] = np.clip(total, 0, 100).round(0).astype(int)
     out["red_flag"] = out["promoter_sell"] | out["pledge_creation"] \
         | out["bulk_circular"]
+
+    # ---- vs 21 DMA + technical posture + action label
+    out["vs_21dma_pct"] = ((p1 / stats["sma21"] - 1) * 100).round(1)
+    above21 = (p1 > stats["sma21"]).fillna(False)
+    above50 = (p1 > stats["sma50"]).fillna(False)
+    above200 = (p1 > stats["sma200"]).fillna(False)
+
+    def posture(i):
+        n = int(above21[i]) + int(above50[i]) + int(above200[i])
+        if pd.isna(stats.loc[i, "sma200"]):
+            return "> 21D" if above21[i] else "< 21D"
+        return {3: "Above 21/50/200D", 0: "Below all DMAs",
+                2: "Mixed (2 of 3)", 1: "Mixed (1 of 3)"}[n]
+    out["tech_posture"] = [posture(i) for i in out.index]
+
+    # Action rules (rule-based triage, not advice):
+    #   IGNORE  red flag, or weak score
+    #   LATE    structure Extended - move likely already happened
+    #   ACT     score >= 55 AND trading above its 21 DMA
+    #   WATCH   score 35-54, or strong score but below 21 DMA
+    ACT_MIN_SCORE, WATCH_MIN_SCORE = 55, 35
+    out["action"] = np.select(
+        [out["red_flag"],
+         out["structure"].eq("Extended"),
+         (out["score"] >= ACT_MIN_SCORE) & above21,
+         out["score"] >= WATCH_MIN_SCORE],
+        ["IGNORE", "LATE", "ACT", "WATCH"], default="IGNORE")
 
     ga = out[out["grade_a"]].sort_values("score", ascending=False)
     gb = out[out["grade_b"]].sort_values("score", ascending=False)
