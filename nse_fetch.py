@@ -135,14 +135,44 @@ def _dmy(d: dt.date) -> str:
 
 
 def fetch_bulk_block(session, frm: dt.date, to: dt.date):
-    """Bulk and block deals via NSE historical API."""
+    """Bulk and block deals. Plan A: the nsearchives CSVs (same server that
+    already serves us the bhavcopy, so it works from cloud IPs). Plan B:
+    the www API (often blocked from data centers)."""
+    import re as _re
     out = {}
-    for kind in ("bulk-deals", "block-deals"):
-        js = _api_get(session, f"https://www.nseindia.com/api/historical/{kind}",
-                      {"from": _dmy(frm), "to": _dmy(to)})
-        rows = (js or {}).get("data", []) if isinstance(js, dict) else (js or [])
-        out[kind] = pd.DataFrame(rows)
-        print(f"[info] {kind}: {len(out[kind])} rows")
+    archive = {"bulk-deals": "bulk.csv", "block-deals": "block.csv"}
+    for kind, fname in archive.items():
+        df = pd.DataFrame()
+        # --- Plan A: archive CSV
+        try:
+            r = session.get(
+                f"https://nsearchives.nseindia.com/content/equities/{fname}",
+                timeout=30)
+            if r.status_code == 200 and len(r.content) > 50:
+                df = pd.read_csv(io.BytesIO(r.content))
+                df.columns = [str(c).strip() for c in df.columns]
+                for c in df.select_dtypes(include="object").columns:
+                    df[c] = df[c].astype(str).str.strip()
+                datec = next((c for c in df.columns
+                              if _re.search("date", c, _re.I)), None)
+                if datec:
+                    d = pd.to_datetime(df[datec], format="%d-%b-%Y",
+                                       errors="coerce")
+                    d = d.fillna(pd.to_datetime(df[datec], dayfirst=True,
+                                                errors="coerce"))
+                    df = df[(d >= pd.Timestamp(frm)) & (d <= pd.Timestamp(to))]
+        except requests.RequestException as e:
+            print(f"[warn] archive {fname}: {e}")
+        # --- Plan B: www API
+        if df.empty:
+            js = _api_get(session,
+                          f"https://www.nseindia.com/api/historical/{kind}",
+                          {"from": _dmy(frm), "to": _dmy(to)})
+            rows = (js or {}).get("data", []) if isinstance(js, dict) \
+                else (js or [])
+            df = pd.DataFrame(rows)
+        out[kind] = df
+        print(f"[info] {kind}: {len(df)} rows")
     return out["bulk-deals"], out["block-deals"]
 
 
