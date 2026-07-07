@@ -48,3 +48,15 @@ VOL_FULL_SCORE_MULTIPLE = 2.0
 # ---------- Report ----------
 TOP_N_DISPLAY = 40               # max rows per grade table
 MIN_HISTORY_DAYS = 25            # minimum days of data before screener runs
+
+# ---------- Tier 1/2 additions ----------
+MIN_PRICE = 30.0                 # sub-Rs30 counters are operator playgrounds
+RS_LOOKBACK = 60                 # relative-strength window (sessions)
+PERSIST_WINDOW = 15              # sessions to count repeat appearances
+STEALTH_DELIV_MULT = 1.6         # 5d avg delivery qty vs 20d avg
+STEALTH_MAX_ABS_5D_PCT = 3.0     # price must be quiet: |5d change| under this
+STEALTH_TOP_N = 15
+SCORECARD_HORIZONS = (5, 10, 20) # forward-return horizons (sessions)
+SCORECARD_LOOKBACK_DAYS = 120    # how far back to evaluate past signals
+FO_OI_TAG_PCT = 5.0              # futures OI change worth tagging
+DISTRIB_DELIV_MULT = 1.5         # holdings: heavy delivery on a down day
