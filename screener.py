@@ -231,11 +231,13 @@ def run_screen(history: pd.DataFrame, events: dict) -> dict:
         if len(flags) and "notes" in flags else ""
 
     W = C.SCORE_WEIGHTS
-    deliv_pts = np.clip((out["dq_x_20d"] - 1)
-                        / (C.DELIV_FULL_SCORE_MULTIPLE - 1), 0, 1) * W["delivery_max"]
-    vol_pts = np.clip((out["vol_x_20d"] - 1)
-                      / (C.VOL_FULL_SCORE_MULTIPLE - 1), 0, 1) * W["volume_max"]
-    struct_pts = out["structure"].map(W["structure"])
+    deliv_pts = pd.Series(
+        np.clip((out["dq_x_20d"] - 1) / (C.DELIV_FULL_SCORE_MULTIPLE - 1),
+                0, 1) * W["delivery_max"], index=out.index).fillna(0)
+    vol_pts = pd.Series(
+        np.clip((out["vol_x_20d"] - 1) / (C.VOL_FULL_SCORE_MULTIPLE - 1),
+                0, 1) * W["volume_max"], index=out.index).fillna(0)
+    struct_pts = out["structure"].map(W["structure"]).fillna(0)
     ev_pts = (out["promoter_buy"] * W["promoter_buy"]
               + out["block_deal"] * W["block_deal"]
               + out["bulk_buy"] * W["bulk_buy"]
@@ -243,8 +245,8 @@ def run_screen(history: pd.DataFrame, events: dict) -> dict:
               + out["promoter_sell"] * W["promoter_sell"]
               + out["pledge_creation"] * W["pledge_creation"]
               + out["bulk_circular"] * W["bulk_circular"])
-    out["score"] = np.clip(deliv_pts + vol_pts + struct_pts + ev_pts,
-                           0, 100).round(0).astype(int)
+    total = (deliv_pts + vol_pts + struct_pts + ev_pts).fillna(0)
+    out["score"] = np.clip(total, 0, 100).round(0).astype(int)
     out["red_flag"] = out["promoter_sell"] | out["pledge_creation"] \
         | out["bulk_circular"]
 
