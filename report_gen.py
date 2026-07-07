@@ -71,6 +71,12 @@ def _struct_tag(s):
 
 def _events_cell(r):
     bits = []
+    oi = r.get("fut_oi_chg_pct")
+    if oi is not None and pd.notna(oi):
+        if oi >= 5:
+            bits.append(f'<span class="ev ev-g">OI +{oi:.0f}%</span>')
+        elif oi <= -5:
+            bits.append(f'<span class="ev ev-r">OI {oi:.0f}%</span>')
     if r["promoter_buy"]:
         bits.append('<span class="ev ev-g">Promoter BUY</span>')
     if r["block_deal"]:
@@ -124,14 +130,18 @@ def _table(df: pd.DataFrame) -> str:
  class="{'pos' if not pd.isna(d21) and d21>=0 else 'neg'}">{d21s}</td>
 <td>{_struct_tag(r['structure'])}</td>
 <td class="sub">{html.escape(str(r.get('tech_posture','')))}</td>
+<td data-v="{0 if pd.isna(r.get('rs_pct')) else r.get('rs_pct')}">{
+    '—' if pd.isna(r.get('rs_pct')) else f"{r.get('rs_pct'):.0f}"}</td>
+<td data-v="{r.get('seen',1)}">{'<b>'+str(int(r.get('seen',1)))+'x</b>'
+    if r.get('seen',1)>=2 else str(int(r.get('seen',1)))+'x'}</td>
 <td data-v="{r['from_52w_high_pct']}">{r['from_52w_high_pct']:.0f}%</td>
 <td>{_events_cell(r)}</td>
 <td>{_links(sym)}</td></tr>""")
     return f"""<div class="scrollx"><table><thead><tr>
 <th>Symbol</th><th>Action</th><th>Score</th><th>Close</th><th>3D chg</th>
 <th>Vol vs 20D</th><th>DelQty vs 20D</th><th>Del% 3D</th><th>vs 21DMA</th>
-<th>Structure</th><th>Trend</th><th>vs 52wH</th><th>Events (7d)</th>
-<th>Check</th></tr></thead><tbody>{''.join(rows)}</tbody></table></div>"""
+<th>Structure</th><th>Trend</th><th>RS</th><th>Seen 15d</th>
+<th>vs 52wH</th><th>Events (7d)</th><th>Check</th></tr></thead><tbody>{''.join(rows)}</tbody></table></div>"""
 
 
 def _events_section(flags: pd.DataFrame) -> str:
@@ -151,6 +161,87 @@ def _events_section(flags: pd.DataFrame) -> str:
     return f"""<div class="scrollx"><table><thead><tr><th>Symbol</th>
 <th>Flags</th><th>Detail</th></tr></thead><tbody>{''.join(rows)}</tbody>
 </table></div>"""
+
+
+def _stealth_table(df) -> str:
+    if df is None or df.empty:
+        return ('<div class="empty">No stealth accumulation detected today '
+                '(elevated delivery with a quiet price is rare - that is '
+                'the point).</div>')
+    rows = []
+    for sym, r in df.iterrows():
+        rows.append(f"""<tr><td class="sym">{html.escape(str(sym))}</td>
+<td data-v="{r['close']}">₹{r['close']:,.2f}</td>
+<td data-v="{r['deliv5_x']}"><b>{r['deliv5_x']}x</b></td>
+<td data-v="{r['chg5_pct']}" class="{'pos' if r['chg5_pct']>=0 else 'neg'}">
+{r['chg5_pct']:+.1f}%</td>
+<td data-v="{r['deliv_pct']}">{r['deliv_pct']:.0f}%</td>
+<td data-v="{r['vs_21dma_pct']}">{r['vs_21dma_pct']:+.1f}%</td>
+<td>{_links(sym)}</td></tr>""")
+    return f"""<div class="scrollx"><table><thead><tr><th>Symbol</th>
+<th>Close</th><th>DelQty 5d vs 20D</th><th>5D price chg</th><th>Del%</th>
+<th>vs 21DMA</th><th>Check</th></tr></thead><tbody>{''.join(rows)}
+</tbody></table></div>"""
+
+
+def _scorecard_section(sc) -> str:
+    if sc is None or sc.empty:
+        return ('<div class="empty">Scorecard builds itself automatically '
+                'as signal history accumulates - check back in a couple of '
+                'weeks.</div>')
+    rows = []
+    for _, r in sc.iterrows():
+        cells = [f'<td>{_action_badge(r["action"])}</td>',
+                 f'<td>{int(r["signals"])}</td>']
+        import config as _C
+        for h in _C.SCORECARD_HORIZONS:
+            a, hh, x = r.get(f"avg_{h}d"), r.get(f"hit_{h}d"),                 r.get(f"excess_{h}d")
+            if a is None or pd.isna(a):
+                cells.append("<td>—</td>")
+            else:
+                cls = "pos" if a >= 0 else "neg"
+                cells.append(f'<td><span class="{cls}">{a:+.1f}%</span> '
+                             f'<span class="sub">({hh:.0f}% hit, '
+                             f'{x:+.1f}% vs mkt)</span></td>')
+        rows.append("<tr>" + "".join(cells) + "</tr>")
+    import config as _C
+    heads = "".join(f"<th>{h}-day fwd</th>" for h in _C.SCORECARD_HORIZONS)
+    return f"""<div class="scrollx"><table><thead><tr><th>Label</th>
+<th>Signals</th>{heads}</tr></thead><tbody>{''.join(rows)}</tbody></table>
+</div>"""
+
+
+def _sectors_section(clusters) -> str:
+    if not clusters:
+        return ""
+    items = "".join(
+        f'<div class="kpi"><b>{html.escape(sec)}</b>'
+        f'<span>{html.escape(", ".join(syms))}</span></div>'
+        for sec, syms in clusters[:6])
+    return f'<h2>Sector clusters in today\'s signals</h2>'            f'<div class="kpis">{items}</div>'
+
+
+def _distribution_section(dist, holdings) -> str:
+    if not holdings:
+        return ('<div class="empty">Add your holdings to '
+                '<b>data/holdings.txt</b> in the repo (one NSE symbol per '
+                'line) to activate exit-footprint monitoring on your own '
+                'portfolio.</div>')
+    if dist is None or dist.empty:
+        return ('<div class="empty">No distribution footprint in your '
+                'holdings over the last 3 sessions.</div>')
+    rows = "".join(
+        f'<tr><td class="sym">{html.escape(str(s))}</td>'
+        f'<td>{int(r["down_days"])}</td>'
+        f'<td><b>{r["max_deliv_x"]}x</b></td>'
+        f'<td>₹{r["last_close"]:,.2f}</td><td>{_links(s)}</td></tr>'
+        for s, r in dist.iterrows())
+    return f"""<div class="note" style="border-left-color:var(--red)">
+<b>⚠ Heavy delivery on down days detected in your holdings</b> - review
+whether smart money is exiting.</div>
+<div class="scrollx"><table><thead><tr><th>Holding</th><th>Down days
+(of 3)</th><th>Peak DelQty vs 20D</th><th>Close</th><th>Check</th></tr>
+</thead><tbody>{rows}</tbody></table></div>"""
 
 
 def render(res: dict) -> str:
@@ -187,6 +278,21 @@ Extended, the move likely already happened. <span class="act a-ign">IGNORE
 </span> = red-flagged or weak. ACT is a triage label, not a buy call —
 your conviction gate stays manual. Red events (promoter sell, pledge ↑,
 circular bulk) override everything.</div>
+
+<h2>🕵 Stealth accumulation — heavy delivery, quiet price (earliest
+stage)</h2>
+<div class="sub" style="margin-bottom:8px">Names absorbing supply for 5
+sessions without moving price — often weeks before they would enter Grade
+A. Higher risk, earliest entry.</div>
+{_stealth_table(res.get('stealth'))}
+
+{_sectors_section(res.get('sectors', []))}
+
+<h2>Self-scorecard — how past signals actually performed</h2>
+{_scorecard_section(res.get('scorecard'))}
+
+<h2>Your holdings — distribution watch</h2>
+{_distribution_section(res.get('distribution'), res.get('holdings', []))}
 
 <h2>Market-wide smart money events (last {C.EVENT_LOOKBACK_DAYS} days)</h2>
 {_events_section(res.get('event_flags', pd.DataFrame()))}
