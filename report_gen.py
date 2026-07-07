@@ -33,6 +33,12 @@ margin-right:4px}.t-base{background:#0c4a6e;color:#7dd3fc}
 .ev{font-size:11px;padding:1px 6px;border-radius:6px;margin-right:3px}
 .ev-g{background:#14532d;color:#86efac}.ev-r{background:#450a0a;color:#fca5a5}
 .ev-b{background:#1e3a8a;color:#bfdbfe}
+.act{display:inline-block;padding:2px 9px;border-radius:6px;font-size:11px;
+font-weight:800;letter-spacing:.4px}
+.a-act{background:#166534;color:#bbf7d0}.a-watch{background:#78350f;color:#fde68a}
+.a-late{background:#7c2d12;color:#fdba74}.a-ign{background:#27303f;color:#8b96ad}
+a.lnk{color:#7db3f5;text-decoration:none;font-size:12px}
+a.lnk:hover{text-decoration:underline}
 .note{background:#1c2436;border-left:3px solid var(--amb);padding:10px 12px;
 border-radius:6px;font-size:13px;color:var(--mut);margin:10px 0}
 .empty{color:var(--mut);padding:14px;background:var(--card);
@@ -82,27 +88,50 @@ def _events_cell(r):
     return "".join(bits) or '<span class="sub">—</span>'
 
 
+def _action_badge(a):
+    m = {"ACT": "a-act", "WATCH": "a-watch", "LATE": "a-late",
+         "IGNORE": "a-ign"}
+    return f'<span class="act {m.get(a,"a-ign")}">{html.escape(str(a))}</span>'
+
+
+def _links(sym):
+    s = html.escape(str(sym))
+    return (f'<a class="lnk" target="_blank" '
+            f'href="https://www.screener.in/company/{s}/">Fund</a> · '
+            f'<a class="lnk" target="_blank" '
+            f'href="https://in.tradingview.com/chart/?symbol=NSE%3A{s}">Chart</a>')
+
+
 def _table(df: pd.DataFrame) -> str:
     if df.empty:
         return '<div class="empty">No stocks passed this screen today.</div>'
     rows = []
     for sym, r in df.head(C.TOP_N_DISPLAY).iterrows():
         chg = r["chg3d_pct"]
+        d21 = r["vs_21dma_pct"]
+        d21s = "—" if pd.isna(d21) else f"{d21:+.1f}%"
         rows.append(f"""<tr>
 <td class="sym">{html.escape(str(sym))}</td>
+<td data-v="{'3' if r['action']=='ACT' else '2' if r['action']=='WATCH'
+    else '1' if r['action']=='LATE' else '0'}">{_action_badge(r['action'])}</td>
 <td data-v="{r['score']}">{_score_badge(r['score'])}</td>
 <td data-v="{r['close']}">₹{r['close']:,.2f}</td>
 <td data-v="{chg:.2f}" class="{'pos' if chg>=0 else 'neg'}">{chg:+.1f}%</td>
 <td data-v="{r['vol_x_20d']}">{r['vol_x_20d']}x</td>
 <td data-v="{r['dq_x_20d']}">{r['dq_x_20d']}x</td>
 <td data-v="{r['deliv_pct']}">{r['deliv_pct_prev']:.0f}→{r['deliv_pct']:.0f}%</td>
+<td data-v="{-999 if pd.isna(d21) else d21}"
+ class="{'pos' if not pd.isna(d21) and d21>=0 else 'neg'}">{d21s}</td>
 <td>{_struct_tag(r['structure'])}</td>
+<td class="sub">{html.escape(str(r.get('tech_posture','')))}</td>
 <td data-v="{r['from_52w_high_pct']}">{r['from_52w_high_pct']:.0f}%</td>
-<td>{_events_cell(r)}</td></tr>""")
+<td>{_events_cell(r)}</td>
+<td>{_links(sym)}</td></tr>""")
     return f"""<div class="scrollx"><table><thead><tr>
-<th>Symbol</th><th>Score</th><th>Close</th><th>3D chg</th><th>Vol vs 20D</th>
-<th>DelQty vs 20D</th><th>Del% 3D</th><th>Structure</th><th>vs 52wH</th>
-<th>Events (7d)</th></tr></thead><tbody>{''.join(rows)}</tbody></table></div>"""
+<th>Symbol</th><th>Action</th><th>Score</th><th>Close</th><th>3D chg</th>
+<th>Vol vs 20D</th><th>DelQty vs 20D</th><th>Del% 3D</th><th>vs 21DMA</th>
+<th>Structure</th><th>Trend</th><th>vs 52wH</th><th>Events (7d)</th>
+<th>Check</th></tr></thead><tbody>{''.join(rows)}</tbody></table></div>"""
 
 
 def _events_section(flags: pd.DataFrame) -> str:
@@ -135,6 +164,8 @@ def render(res: dict) -> str:
 <div class="sub">Session: <b>{d}</b> · History: {res['n_days']} trading days
 · Liquid EQ universe: {res['universe']} stocks</div>
 <div class="kpis">
+<div class="kpi"><b>{int((ga['action']=='ACT').sum()
+    + (gb['action']=='ACT').sum())}</b><span>ACT tonight</span></div>
 <div class="kpi"><b>{len(ga)}</b><span>Grade A signals</span></div>
 <div class="kpi"><b>{len(gb)}</b><span>Grade B signals</span></div>
 <div class="kpi"><b>{int((ga['structure']=='Base accumulation').sum()
@@ -147,12 +178,15 @@ def render(res: dict) -> str:
 {_table(ga)}
 <h2>Grade B — accumulation pattern, volume 2-of-3 but expanded</h2>
 {_table(gb)}
-<div class="note"><b>How to read:</b> Score ≥65 = strongest footprints.
-<b>Base accumulation</b> near lows is the highest-value zone;
-<b>Extended</b> means the move likely already happened — you'd be late.
-Red events (promoter sell, pledge ↑, circular bulk) override everything:
-skip regardless of score. This is a shortlist, not a buy list — run your
-chart + fundamentals check before any entry.</div>
+<div class="note"><b>How to read:</b>
+<span class="act a-act">ACT</span> = strong footprint (score ≥55) trading
+above its 21 DMA — run your chart + fundamentals check tonight (use the
+Fund/Chart links). <span class="act a-watch">WATCH</span> = real signal,
+not compelling yet or below 21 DMA. <span class="act a-late">LATE</span> =
+Extended, the move likely already happened. <span class="act a-ign">IGNORE
+</span> = red-flagged or weak. ACT is a triage label, not a buy call —
+your conviction gate stays manual. Red events (promoter sell, pledge ↑,
+circular bulk) override everything.</div>
 
 <h2>Market-wide smart money events (last {C.EVENT_LOOKBACK_DAYS} days)</h2>
 {_events_section(res.get('event_flags', pd.DataFrame()))}
