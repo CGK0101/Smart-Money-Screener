@@ -118,7 +118,8 @@ def build_event_flags(events: dict) -> pd.DataFrame:
 
 
 # --------------------------------------------------------------- main screen
-def run_screen(history: pd.DataFrame, events: dict) -> dict:
+def run_screen(history: pd.DataFrame, events: dict,
+               fo_oi: pd.DataFrame | None = None) -> dict:
     """Returns dict with grade_a, grade_b dataframes + metadata."""
     df = history[history["SERIES"].isin(C.SERIES_ALLOWED)].copy()
     df["DATE"] = pd.to_datetime(df["DATE"])
@@ -145,6 +146,8 @@ def run_screen(history: pd.DataFrame, events: dict) -> dict:
         lambda s: s.rolling(C.SMA_SHORT, min_periods=30).mean())
     df["sma200"] = g["CLOSE_PRICE"].transform(
         lambda s: s.rolling(C.SMA_LONG, min_periods=100).mean())
+    df["ret_rs"] = g["CLOSE_PRICE"].transform(
+        lambda s: s / s.shift(min(C.RS_LOOKBACK, max(1, len(s) - 1))) - 1)
     df["low52"] = g["LOW_PRICE"].transform(
         lambda s: s.rolling(250, min_periods=60).min())
     df["hi52"] = g["HIGH_PRICE"].transform(
@@ -165,7 +168,7 @@ def run_screen(history: pd.DataFrame, events: dict) -> dict:
                            "DELIV_QTY", "DELIV_PER"])
     stats = full[full["rk"] == 1].set_index("SYMBOL")[
         ["vol20", "dq20", "to20", "sma21", "sma50", "sma200", "low52", "hi52",
-         "TURNOVER_LACS", "NO_OF_TRADES"]]
+         "ret_rs", "TURNOVER_LACS", "NO_OF_TRADES"]]
 
     def col(m, k):
         return w[(m, k)]
@@ -194,7 +197,8 @@ def run_screen(history: pd.DataFrame, events: dict) -> dict:
     deliv_qty_ok = (d1 > d3) & (d1 > stats["dq20"])
     deliv_strong = dp_strict & (d1 > d2) & (d2 > d3) & (d1 > stats["dq20"])
 
-    liquid = stats["to20"] >= C.MIN_AVG_TURNOVER_LACS
+    liquid = (stats["to20"] >= C.MIN_AVG_TURNOVER_LACS) \
+        & (p1 >= C.MIN_PRICE)
 
     out["grade_a"] = liquid & price_strict & vol_strict & deliv_strong
     out["grade_b"] = liquid & price_soft & vol_expanded & dp_strict \
@@ -279,8 +283,46 @@ def run_screen(history: pd.DataFrame, events: dict) -> dict:
          out["score"] >= WATCH_MIN_SCORE],
         ["IGNORE", "LATE", "ACT", "WATCH"], default="IGNORE")
 
+    # ---- relative strength percentile within the liquid universe
+    rs_rank = stats.loc[liquid[liquid].index, "ret_rs"].rank(pct=True) * 100
+    out["rs_pct"] = rs_rank.reindex(out.index).round(0)
+
+    # ---- futures OI overlay (F&O stocks only)
+    out["fut_oi_chg_pct"] = np.nan
+    if fo_oi is not None and len(fo_oi):
+        m = fo_oi.set_index("SYMBOL")["oi_chg_pct"]
+        out["fut_oi_chg_pct"] = m.reindex(out.index)
+
+    out["seen"] = 1  # persistence count; overwritten by run_daily
+
     ga = out[out["grade_a"]].sort_values("score", ascending=False)
     gb = out[out["grade_b"]].sort_values("score", ascending=False)
+
+    # ---- Stealth scan: elevated delivery, dormant price (pre-markup)
+    t5 = g.tail(5).copy()
+    agg5 = t5.groupby("SYMBOL").agg(dq5=("DELIV_QTY", "mean"),
+                                    p_first=("CLOSE_PRICE", "first"),
+                                    p_last=("CLOSE_PRICE", "last"),
+                                    dp_last=("DELIV_PER", "last"),
+                                    n5=("CLOSE_PRICE", "size"))
+    agg5 = agg5[agg5["n5"] == 5].join(stats[["dq20", "sma21"]], how="inner")
+    agg5["deliv5_x"] = agg5["dq5"] / agg5["dq20"]
+    agg5["chg5_pct"] = (agg5["p_last"] / agg5["p_first"] - 1) * 100
+    agg5["vs_21dma_pct"] = (agg5["p_last"] / agg5["sma21"] - 1) * 100
+    shortlisted = set(ga.index) | set(gb.index)
+    stealth = agg5[
+        agg5.index.isin(liquid[liquid].index)
+        & ~agg5.index.isin(shortlisted)
+        & (agg5["deliv5_x"] >= C.STEALTH_DELIV_MULT)
+        & (agg5["chg5_pct"].abs() <= C.STEALTH_MAX_ABS_5D_PCT)
+        & agg5["dq20"].notna()
+    ].sort_values("deliv5_x", ascending=False).head(C.STEALTH_TOP_N)
+    stealth = stealth.rename(columns={"p_last": "close",
+                                      "dp_last": "deliv_pct"})
+    stealth[["deliv5_x", "chg5_pct", "vs_21dma_pct"]] = \
+        stealth[["deliv5_x", "chg5_pct", "vs_21dma_pct"]].round(2)
+
     return {"grade_a": ga, "grade_b": gb, "latest": pd.Timestamp(latest),
             "n_days": len(dates), "universe": int(liquid.sum()),
+            "stealth": stealth,
             "event_flags": flags.reset_index() if len(flags) else pd.DataFrame()}
