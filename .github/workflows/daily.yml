@@ -2,10 +2,14 @@ name: Daily Smart Money Report
 
 on:
   schedule:
-    # NSE publishes sec_bhavdata_full ~18:30-19:00 IST.
-    # Two attempts: 19:15 IST and 20:30 IST (13:45 & 15:00 UTC), Mon-Fri.
-    - cron: "45 13 * * 1-5"
-    - cron: "0 15 * * 1-5"
+    # NSE publishes sec_bhavdata_full ~18:30-19:00 IST. GitHub's scheduler
+    # runs jobs LATE under load, worst at popular minutes (:00/:15/:30/:45),
+    # so we use odd minutes and three attempts:
+    #   19:22 IST and 21:07 IST evening attempts, plus a 05:41 IST overnight
+    #   safety net guaranteeing freshness before market open.
+    - cron: "52 13 * * 1-5"    # 19:22 IST Mon-Fri
+    - cron: "37 15 * * 1-5"    # 21:07 IST Mon-Fri
+    - cron: "11 0 * * 2-6"     # 05:41 IST Tue-Sat (covers Mon-Fri sessions)
   workflow_dispatch: {}        # manual "Run workflow" button
 
 permissions:
