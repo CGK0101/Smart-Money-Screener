@@ -72,9 +72,11 @@ def main():
 
     fo_oi = nf.fetch_fo_oi(last_date)
     sector_map = nf.fetch_sector_map()
+    equity_syms = nf.fetch_equity_symbols()
 
     # 3. screen
-    res = screener.run_screen(history, events, fo_oi=fo_oi)
+    res = screener.run_screen(history, events, fo_oi=fo_oi,
+                              equity_syms=equity_syms)
 
     # 4. analytics: signals log, persistence, scorecard, sectors, holdings
     log = analytics.append_signals(res)
