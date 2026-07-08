@@ -119,9 +119,12 @@ def build_event_flags(events: dict) -> pd.DataFrame:
 
 # --------------------------------------------------------------- main screen
 def run_screen(history: pd.DataFrame, events: dict,
-               fo_oi: pd.DataFrame | None = None) -> dict:
+               fo_oi: pd.DataFrame | None = None,
+               equity_syms: set | None = None) -> dict:
     """Returns dict with grade_a, grade_b dataframes + metadata."""
     df = history[history["SERIES"].isin(C.SERIES_ALLOWED)].copy()
+    if equity_syms:  # drop ETFs / liquid funds that also trade in EQ series
+        df = df[df["SYMBOL"].isin(equity_syms)]
     df["DATE"] = pd.to_datetime(df["DATE"])
     df = df.sort_values(["SYMBOL", "DATE"])
 
