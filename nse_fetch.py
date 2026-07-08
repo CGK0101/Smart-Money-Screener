@@ -303,3 +303,37 @@ def fetch_sector_map(session=None) -> pd.DataFrame:
     if os.path.exists(SECTOR_PATH):  # stale cache better than nothing
         return pd.read_csv(SECTOR_PATH)
     return pd.DataFrame(columns=["SYMBOL", "SECTOR"])
+
+
+# ------------------------------------------------- genuine-equity master list
+EQLIST_PATH = os.path.join(DATA_DIR, "equity_list.csv")
+
+
+def fetch_equity_symbols(session=None) -> set:
+    """Symbols from NSE's EQUITY_L.csv master list of listed equity shares.
+    ETFs, liquid funds, and index funds trade in the EQ series but are NOT
+    on this list - filtering against it removes them from the universe.
+    Cached, refreshed weekly. Empty set (= no filtering) if unavailable."""
+    if os.path.exists(EQLIST_PATH):
+        age = dt.date.today() - dt.date.fromtimestamp(
+            os.path.getmtime(EQLIST_PATH))
+        if age.days < 7:
+            df = pd.read_csv(EQLIST_PATH)
+            return set(df["SYMBOL"].astype(str).str.strip())
+    s = session or _session()
+    try:
+        r = s.get("https://nsearchives.nseindia.com/content/equities/"
+                  "EQUITY_L.csv", timeout=30)
+        if r.status_code == 200 and len(r.content) > 10000:
+            df = pd.read_csv(io.BytesIO(r.content))
+            df.columns = [str(c).strip() for c in df.columns]
+            if "SYMBOL" in df.columns:
+                df[["SYMBOL"]].to_csv(EQLIST_PATH, index=False)
+                syms = set(df["SYMBOL"].astype(str).str.strip())
+                print(f"[info] equity master list: {len(syms)} symbols")
+                return syms
+    except requests.RequestException as e:
+        print(f"[warn] equity list: {e}")
+    if os.path.exists(EQLIST_PATH):  # stale cache better than nothing
+        return set(pd.read_csv(EQLIST_PATH)["SYMBOL"].astype(str).str.strip())
+    return set()
