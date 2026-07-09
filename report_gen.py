@@ -252,6 +252,8 @@ def render(res: dict) -> str:
 <title>Smart Money Screener — {d}</title><style>{CSS}</style></head><body>
 <div class="wrap">
 <h1>Smart Money Screener</h1>
+<div class="sub"><a class="lnk" href="fo.html">F&amp;O Strategy Board →</a>
+</div>
 <div class="sub">Session: <b>{d}</b> · History: {res['n_days']} trading days
 · Liquid EQ universe: {res['universe']} stocks</div>
 <div class="kpis">
