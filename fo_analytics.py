@@ -320,10 +320,27 @@ def stock_bridge(fo: pd.DataFrame, act_watch: list) -> pd.DataFrame:
 
 # ------------------------------------------------------------- orchestrator
 def run_fo(session_date: dt.date, act_watch: list) -> dict | None:
-    fo_raw = fetch_fo_bhav(session_date)
+    # F&O bhavcopy for the exact session may not be published yet (or the
+    # date is a holiday). Walk back up to 6 calendar days to the most recent
+    # file that actually exists - mirrors how the equity leg uses the last
+    # available session rather than insisting on "today".
+    fo_raw, used_date = pd.DataFrame(), None
+    for back in range(0, 7):
+        d = session_date - dt.timedelta(days=back)
+        if d.weekday() >= 5:
+            continue
+        cand = fetch_fo_bhav(d)
+        if not cand.empty:
+            fo_raw, used_date = cand, d
+            if back:
+                print(f"[info] FO bhavcopy for {session_date} not available; "
+                      f"using most recent {used_date}")
+            break
     if fo_raw.empty:
-        print("[warn] FO bhavcopy unavailable; FO page skipped this run")
+        print("[warn] FO bhavcopy unavailable (last 6 sessions all 404); "
+              "FO page skipped this run")
         return None
+    session_date = used_date
     fo = _std(fo_raw)
     if fo.empty:
         print("[warn] FO bhavcopy format unrecognized; FO page skipped")
