@@ -102,7 +102,21 @@ def main():
           f"Grade B={len(res['grade_b'])}, "
           f"stealth={len(res.get('stealth', []))}")
 
-    # 6. optional Telegram alert
+    # 6. F&O strategy board (leg 2) - fully graceful
+    try:
+        import fo_analytics
+        import fo_report
+        aw = [s for f in (res["grade_a"], res["grade_b"])
+              for s, r in f.iterrows() if r["action"] in ("ACT", "WATCH")]
+        fo = fo_analytics.run_fo(last_date, aw)
+        if fo:
+            with open(os.path.join(DOCS, "fo.html"), "w") as f:
+                f.write(fo_report.render_fo(fo))
+            print(f"[done] FO board: {len(fo['boards'])} index/expiry cards")
+    except Exception as e:  # noqa: BLE001
+        print(f"[warn] FO leg failed, equity report unaffected: {e}")
+
+    # 7. optional Telegram alert
     send_telegram(res)
 
 
