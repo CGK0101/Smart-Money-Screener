@@ -40,6 +40,14 @@ jobs:
             python scripts/backfill.py --days 250
           fi
 
+      - name: Auto-backfill FO metrics on first run (~15 min, once only)
+        run: |
+          rows=$(wc -l < data/fo_metrics.csv 2>/dev/null || echo 0)
+          echo "FO metrics rows: $rows"
+          if [ "$rows" -lt 60 ]; then
+            python scripts/backfill_fo.py --days 90
+          fi
+
       - name: Run pipeline
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
