@@ -149,36 +149,52 @@ def analyze_index(fo: pd.DataFrame, sym: str, session_date: dt.date) -> list:
         ch = opts[opts["exp"] == exp]
         dte = max((exp.date() - session_date).days, 0)
         T = max(dte, 0.5) / 365.0
-        # spot: underlying price col if present, else near-future close,
-        # else put-call parity at the strike with min |C-P|
+        # collapse any duplicate strike/side rows within this expiry FIRST,
+        # so straddle and walls are computed on clean per-strike figures.
+        ce = ch[ch["opt"] == "CE"].groupby("k").agg(
+            close=("close", "max"), oi=("oi", "sum")).sort_index()
+        pe = ch[ch["opt"] == "PE"].groupby("k").agg(
+            close=("close", "max"), oi=("oi", "sum")).sort_index()
+        if ce.empty or pe.empty:
+            continue
+        # spot: underlying col if present, else near-future close, else
+        # put-call parity at the strike with the smallest |C - P|
         spot = ch["und"].dropna().iloc[0] if ch["und"].notna().any() else \
             (float(fut_near["close"]) if fut_near is not None else np.nan)
-        piv = ch.pivot_table(index="k", columns="opt", values="close",
-                             aggfunc="last")
-        if (np.isnan(spot) or spot <= 0) and {"CE", "PE"} <= set(piv.columns):
-            both = piv.dropna()
-            if len(both):
-                k0 = (both["CE"] - both["PE"]).abs().idxmin()
-                spot = k0 + both.loc[k0, "CE"] - both.loc[k0, "PE"]
+        if np.isnan(spot) or spot <= 0:
+            common = ce.index.intersection(pe.index)
+            if len(common):
+                diff = (ce.loc[common, "close"] - pe.loc[common, "close"]).abs()
+                k0 = diff.idxmin()
+                spot = k0 + ce.loc[k0, "close"] - pe.loc[k0, "close"]
         if np.isnan(spot) or spot <= 0:
             continue
-        atm = min(piv.index, key=lambda k: abs(k - spot))
-        cpx = piv.loc[atm].get("CE", np.nan)
-        ppx = piv.loc[atm].get("PE", np.nan)
-        straddle = (cpx + ppx) if pd.notna(cpx) and pd.notna(ppx) else np.nan
-        em_pct = round(straddle / spot * 100, 2) if pd.notna(straddle) else np.nan
-        ivc = implied_vol(cpx, spot, atm, T, call=True) if pd.notna(cpx) else np.nan
-        ivp = implied_vol(ppx, spot, atm, T, call=False) if pd.notna(ppx) else np.nan
+        # ATM = strike closest to spot that has BOTH legs priced > 0
+        both_k = [k for k in ce.index.intersection(pe.index)
+                  if ce.loc[k, "close"] > 0 and pe.loc[k, "close"] > 0]
+        if not both_k:
+            continue
+        atm = min(both_k, key=lambda k: abs(k - spot))
+        cpx = float(ce.loc[atm, "close"])
+        ppx = float(pe.loc[atm, "close"])
+        straddle = cpx + ppx
+        # diagnostic: prints the ATM legs so weekly-expiry parsing can be
+        # verified against a live option chain. Harmless; remove later.
+        print(f"[fo-debug] {sym} exp={exp.date()} dte={dte} spot={spot:.0f} "
+              f"atm={atm:.0f} CE={cpx:.1f} PE={ppx:.1f} straddle={straddle:.1f}")
+        em_pct = round(straddle / spot * 100, 2)
+        ivc = implied_vol(cpx, spot, atm, T, call=True)
+        ivp = implied_vol(ppx, spot, atm, T, call=False)
         iv = round(np.nanmean([ivc, ivp]), 2)
-        coi = ch[ch["opt"] == "CE"].groupby("k")["oi"].sum().sort_values(ascending=False)
-        poi = ch[ch["opt"] == "PE"].groupby("k")["oi"].sum().sort_values(ascending=False)
+        coi = ce["oi"].sort_values(ascending=False)
+        poi = pe["oi"].sort_values(ascending=False)
         pcr = round(poi.sum() / coi.sum(), 2) if coi.sum() > 0 else np.nan
         rows.append(dict(
             date=session_date.isoformat(), sym=sym,
             exp=exp.date().isoformat(), dte=dte, spot=round(float(spot), 2),
-            atm=float(atm), straddle=round(float(straddle), 2)
-            if pd.notna(straddle) else np.nan,
-            em_pct=em_pct, iv=iv, iv_skew=round((ivp or np.nan) - (ivc or np.nan), 2)
+            atm=float(atm), straddle=round(float(straddle), 2),
+            em_pct=em_pct, iv=iv,
+            iv_skew=round((ivp or np.nan) - (ivc or np.nan), 2)
             if pd.notna(ivp) and pd.notna(ivc) else np.nan,
             pcr=pcr, max_pain=_max_pain(ch),
             cw=";".join(str(int(k)) for k in coi.head(3).index),
