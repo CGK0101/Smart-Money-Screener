@@ -23,6 +23,24 @@ def _checklist(checks: dict) -> str:
     return "".join(items)
 
 
+def _blueprint_box(bp) -> str:
+    if not bp:
+        return ""
+    return f"""<div style="background:#0d2818;border:1px solid #1e5c38;
+border-radius:10px;padding:12px 14px;margin:10px 0">
+<div style="font-weight:800;color:#86efac;margin-bottom:4px">
+🎯 Strategy blueprint: {html.escape(bp['name'])}</div>
+<div><b>{html.escape(bp['legs'])}</b></div>
+<div class="sub" style="margin:4px 0">{html.escape(bp['cost'])} ·
+{html.escape(bp['risk'])}</div>
+<div class="sub">{html.escape(bp['zone'])}</div>
+<div class="sub" style="margin-top:6px;border-top:1px solid #1e5c38;
+padding-top:6px"><b>Management:</b> {html.escape(bp['mgmt'])}</div>
+<div class="sub" style="margin-top:4px;font-style:italic">Prices are EOD
+closes - re-quote live before entry. Strikes and thesis are the signal;
+your fill and size are yours.</div></div>"""
+
+
 def _board(b: dict) -> str:
     m, v = b["metrics"], b["verdict"]
     ivr = "—" if pd.isna(v["ivr"]) else f"{v['ivr']:.0f}"
@@ -67,6 +85,7 @@ border-radius:12px;padding:14px 16px;margin:14px 0">
 <b>{'—' if pd.isna(m['fut_oi_chg']) else f"{m['fut_oi_chg']:,.0f}"}</b></div>
 </div>
 {radar}
+{_blueprint_box(b.get('blueprint'))}
 <details><summary class="sub" style="cursor:pointer">Verdict checklist
 </summary><div style="columns:2;margin-top:6px">{_checklist(v['checks'])}
 </div></details>
@@ -80,18 +99,19 @@ def _bridge_table(df: pd.DataFrame) -> str:
     rows = []
     for sym, r in df.iterrows():
         liq_cls = {"A": "pos", "B": "", "C": "neg"}[r["liq"]]
-        note = {"A": "options tradeable",
-                "B": "trade only near-ATM, mind spreads",
-                "C": "AVOID options - trade the cash instead"}[r["liq"]]
         rows.append(f"""<tr><td class="sym">{html.escape(str(sym))}</td>
 <td data-v="{r['fut_oi_chg_pct']}"
 class="{'pos' if r['fut_oi_chg_pct']>=0 else 'neg'}">
 {r['fut_oi_chg_pct']:+.1f}%</td>
 <td data-v="{r['opt_val_cr']}">₹{r['opt_val_cr']:,.0f} cr</td>
-<td class="{liq_cls}"><b>{r['liq']}</b> <span class="sub">{note}</span></td>
+<td class="{liq_cls}"><b>{r['liq']}</b></td>
+<td>{html.escape(str(r.get('structure','')))}</td>
+<td class="sub">{html.escape(str(r.get('cost','')))}</td>
+<td class="sub">{html.escape(str(r.get('invalidation','')))}</td>
 </tr>""")
     return f"""<div class="scrollx"><table><thead><tr><th>Equity signal</th>
-<th>Fut OI chg</th><th>Options traded value</th><th>Liquidity grade</th></tr>
+<th>Fut OI chg</th><th>Opt value</th><th>Liq</th><th>Suggested structure</th>
+<th>Cost / reward (EOD)</th><th>Invalidation</th></tr>
 </thead><tbody>{''.join(rows)}</tbody></table></div>"""
 
 
