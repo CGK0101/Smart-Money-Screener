@@ -84,6 +84,19 @@ STAND ASIDE</span></div>
 spot is +0.05% from max pain 24,200
  · straddle -18.5% vs prev session.
 Pin-risk territory - expiry trades only, defined risk, half size.</div>
+<div style="background:#0d2818;border:1px solid #1e5c38;
+border-radius:10px;padding:12px 14px;margin:10px 0">
+<div style="font-weight:800;color:#86efac;margin-bottom:4px">
+🎯 Strategy blueprint: Expiry pin iron fly (HALF SIZE - optional)</div>
+<div><b>Sell 24200 straddle / Buy 24050P + 24350C</b></div>
+<div class="sub" style="margin:4px 0">Est. net credit ≈ ₹101 per lot-unit ·
+Max risk ≈ ₹49 per lot-unit</div>
+<div class="sub">Pin thesis: spot stays near max pain 24,200 into expiry</div>
+<div class="sub" style="margin-top:6px;border-top:1px solid #1e5c38;
+padding-top:6px"><b>Management:</b> Expiry-day pin structure: HALF normal size. Take profit at 25-40% of credit. Exit immediately if spot moves beyond a wing or 1.5x the remaining straddle from max pain.</div>
+<div class="sub" style="margin-top:4px;font-style:italic">Prices are EOD
+closes - re-quote live before entry. Strikes and thesis are the signal;
+your fill and size are yours.</div></div>
 <details><summary class="sub" style="cursor:pointer">Verdict checklist
 </summary><div style="columns:2;margin-top:6px"><div><span class="pos">✓</span> <span class="sub">IV rank available</span></div><div><span class="neg">✗</span> <span class="sub">IV rank &gt;= 60 (rich premium)</span></div><div><span class="neg">✗</span> <span class="sub">IV &gt; realized vol x1.1 (seller edge)</span></div><div><span class="pos">✓</span> <span class="sub">Spot inside OI walls (range-bound)</span></div><div><span class="neg">✗</span> <span class="sub">DTE &gt;= 2 (not pin-risk day)</span></div><div><span class="neg">✗</span> <span class="sub">IV rank &lt;= 30 (cheap premium)</span></div><div><span class="pos">✓</span> <span class="sub">Trend established (vs 21D)</span></div><div><span class="neg">✗</span> <span class="sub">Futures OI supports trend</span></div>
 </div></details>
@@ -115,6 +128,7 @@ STAND ASIDE</span></div>
 <div><span class="sub">Fut OI chg:</span>
 <b>-125,190</b></div>
 </div>
+
 
 <details><summary class="sub" style="cursor:pointer">Verdict checklist
 </summary><div style="columns:2;margin-top:6px"><div><span class="pos">✓</span> <span class="sub">IV rank available</span></div><div><span class="neg">✗</span> <span class="sub">IV rank &gt;= 60 (rich premium)</span></div><div><span class="neg">✗</span> <span class="sub">IV &gt; realized vol x1.1 (seller edge)</span></div><div><span class="pos">✓</span> <span class="sub">Spot inside OI walls (range-bound)</span></div><div><span class="pos">✓</span> <span class="sub">DTE &gt;= 2 (not pin-risk day)</span></div><div><span class="pos">✓</span> <span class="sub">IV rank &lt;= 30 (cheap premium)</span></div><div><span class="pos">✓</span> <span class="sub">Trend established (vs 21D)</span></div><div><span class="neg">✗</span> <span class="sub">Futures OI supports trend</span></div>
@@ -148,6 +162,7 @@ STAND ASIDE</span></div>
 <b>-74,250</b></div>
 </div>
 
+
 <details><summary class="sub" style="cursor:pointer">Verdict checklist
 </summary><div style="columns:2;margin-top:6px"><div><span class="pos">✓</span> <span class="sub">IV rank available</span></div><div><span class="neg">✗</span> <span class="sub">IV rank &gt;= 60 (rich premium)</span></div><div><span class="neg">✗</span> <span class="sub">IV &gt; realized vol x1.1 (seller edge)</span></div><div><span class="pos">✓</span> <span class="sub">Spot inside OI walls (range-bound)</span></div><div><span class="pos">✓</span> <span class="sub">DTE &gt;= 2 (not pin-risk day)</span></div><div><span class="neg">✗</span> <span class="sub">IV rank &lt;= 30 (cheap premium)</span></div><div><span class="pos">✓</span> <span class="sub">Trend established (vs 21D)</span></div><div><span class="neg">✗</span> <span class="sub">Futures OI supports trend</span></div>
 </div></details>
@@ -180,6 +195,7 @@ STAND ASIDE</span></div>
 <b>-74,250</b></div>
 </div>
 
+
 <details><summary class="sub" style="cursor:pointer">Verdict checklist
 </summary><div style="columns:2;margin-top:6px"><div><span class="pos">✓</span> <span class="sub">IV rank available</span></div><div><span class="neg">✗</span> <span class="sub">IV rank &gt;= 60 (rich premium)</span></div><div><span class="neg">✗</span> <span class="sub">IV &gt; realized vol x1.1 (seller edge)</span></div><div><span class="pos">✓</span> <span class="sub">Spot inside OI walls (range-bound)</span></div><div><span class="pos">✓</span> <span class="sub">DTE &gt;= 2 (not pin-risk day)</span></div><div><span class="neg">✗</span> <span class="sub">IV rank &lt;= 30 (cheap premium)</span></div><div><span class="pos">✓</span> <span class="sub">Trend established (vs 21D)</span></div><div><span class="neg">✗</span> <span class="sub">Futures OI supports trend</span></div>
 </div></details>
@@ -189,13 +205,17 @@ STAND ASIDE</span></div>
 futures OI buildup + liquid options = candidate for a defined-risk spread
 instead of cash. Grade C liquidity = slippage eats the edge.</div>
 <div class="scrollx"><table><thead><tr><th>Equity signal</th>
-<th>Fut OI chg</th><th>Options traded value</th><th>Liquidity grade</th></tr>
+<th>Fut OI chg</th><th>Opt value</th><th>Liq</th><th>Suggested structure</th>
+<th>Cost / reward (EOD)</th><th>Invalidation</th></tr>
 </thead><tbody><tr><td class="sym">GODREJPROP</td>
 <td data-v="-2.0"
 class="neg">
 -2.0%</td>
 <td data-v="2271.4">₹2,271 cr</td>
-<td class="pos"><b>A</b> <span class="sub">options tradeable</span></td>
+<td class="pos"><b>A</b></td>
+<td>Bull call spread 2160C/2320C (2026-07-28)</td>
+<td class="sub">debit ≈ ₹47.6/share · max reward ≈ ₹112.3</td>
+<td class="sub">close below 21 DMA = thesis off</td>
 </tr></tbody></table></div>
 <div class="sub" style="margin-top:22px">EOD analysis from the NSE F&amp;O
 bhavcopy. Educational tool — not investment advice. Strikes, sizing and
