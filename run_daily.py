@@ -4,6 +4,7 @@ Run by GitHub Actions every trading evening, or manually: python run_daily.py
 
 import os
 import sys
+import time
 import datetime as dt
 
 import requests
@@ -49,9 +50,20 @@ def main():
     today = dt.date.today()
 
     # 1. bhavcopies (today + patch any recently missed days)
+    # NSE publishes ~18:30-19:00 IST. If this run fired early, don't waste the
+    # slot - retry a few times before falling back to the last session.
     if today.weekday() < 5:
-        if not nf.ensure_bhavcopy(today):
-            print(f"[info] bhavcopy for {today} not available yet "
+        got = nf.ensure_bhavcopy(today)
+        if not got:
+            for attempt in range(1, 4):
+                print(f"[info] bhavcopy {today} not up yet; "
+                      f"waiting 180s (retry {attempt}/3)")
+                time.sleep(180)
+                got = nf.ensure_bhavcopy(today)
+                if got:
+                    break
+        if not got:
+            print(f"[info] bhavcopy for {today} still unavailable "
                   "(holiday or not published). Report will use last session.")
     for back in range(1, 6):
         d = today - dt.timedelta(days=back)
