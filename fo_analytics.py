@@ -22,6 +22,10 @@ import config as C
 BASE = os.path.dirname(os.path.abspath(__file__))
 METRICS_PATH = os.path.join(BASE, "data", "fo_metrics.csv")
 
+# per-run cache of option chains, keyed (sym, expiry-iso) -> dict with
+# ce/pe frames (close, oi indexed by strike), strike step, spot.
+LAST_CHAINS: dict = {}
+
 INDICES = ["NIFTY", "BANKNIFTY"]
 RISK_FREE = 0.07
 
@@ -178,10 +182,10 @@ def analyze_index(fo: pd.DataFrame, sym: str, session_date: dt.date) -> list:
         cpx = float(ce.loc[atm, "close"])
         ppx = float(pe.loc[atm, "close"])
         straddle = cpx + ppx
-        # diagnostic: prints the ATM legs so weekly-expiry parsing can be
-        # verified against a live option chain. Harmless; remove later.
-        print(f"[fo-debug] {sym} exp={exp.date()} dte={dte} spot={spot:.0f} "
-              f"atm={atm:.0f} CE={cpx:.1f} PE={ppx:.1f} straddle={straddle:.1f}")
+        steps = np.diff(sorted(both_k))
+        step = float(np.median(steps)) if len(steps) else 50.0
+        LAST_CHAINS[(sym, exp.date().isoformat())] = dict(
+            ce=ce, pe=pe, step=step, spot=float(spot), atm=float(atm))
         em_pct = round(straddle / spot * 100, 2)
         ivc = implied_vol(cpx, spot, atm, T, call=True)
         ivp = implied_vol(ppx, spot, atm, T, call=False)
@@ -373,7 +377,199 @@ def run_fo(session_date: dt.date, act_watch: list) -> dict | None:
         v = verdict(r, hist)
         prev = hist.iloc[-1] if len(hist) else None
         radar = expiry_radar(r, prev)
-        boards.append(dict(metrics=r, verdict=v, radar=radar))
-    return dict(boards=boards, session=session_date,
-                bridge=stock_bridge(fo, act_watch),
+        bp = build_blueprint(r, v["call"], v["trend"])
+        boards.append(dict(metrics=r, verdict=v, radar=radar, blueprint=bp))
+    bridge = stock_blueprints(fo, stock_bridge(fo, act_watch))
+    return dict(boards=boards, session=session_date, bridge=bridge,
                 hist_days={s: len(_front_series(log, s)) for s in INDICES})
+
+
+# ------------------------------------------------------------- blueprints
+MGMT = {
+    "condor": ("Enter next session (re-quote live; EOD closes shift). "
+               "Take profit at 50% of credit received. Hard exit if loss "
+               "reaches 1x credit, or spot CLOSES beyond a short strike. "
+               "Exit by 1 DTE regardless - never hold condors into expiry."),
+    "fly": ("Expiry-day pin structure: HALF normal size. Take profit at "
+            "25-40% of credit. Exit immediately if spot moves beyond a wing "
+            "or 1.5x the remaining straddle from max pain."),
+    "debit": ("Enter next session on live quotes. Risk = net debit, "
+              "pre-defined. Take profit at 60-100% gain on debit. Exit if "
+              "spot closes back below the 21 DMA (bull) / above it (bear), "
+              "or at 50% loss of debit. Exit by 2 DTE."),
+    "calendar": ("Enter next session. Risk = net debit. Profit zone is spot "
+                 "pinned near the strike at front expiry. Close the whole "
+                 "structure BEFORE the front leg's expiry day. Exit early "
+                 "if spot moves > expected move from the strike."),
+    "stock_spread": ("Defined-risk expression of the equity accumulation "
+                     "signal. Risk = net debit only. Take profit at "
+                     "60-100% of debit. Invalidation: stock closes below "
+                     "its 21 DMA - exit, the accumulation thesis is "
+                     "suspended. Exit by 5 DTE."),
+}
+
+
+def _pick(strikes, target, side):
+    """Nearest listed strike >= target (side=+1) or <= target (side=-1)."""
+    ks = sorted(strikes)
+    cands = [k for k in ks if k >= target] if side > 0 else \
+            [k for k in ks if k <= target]
+    if not cands:
+        return None
+    return cands[0] if side > 0 else cands[-1]
+
+
+def _px(frame, k):
+    try:
+        v = float(frame.loc[k, "close"])
+        return v if v > 0 else None
+    except KeyError:
+        return None
+
+
+def build_blueprint(m: dict, call: str, trend) -> dict | None:
+    """Concrete structure with strikes/costs from EOD closes, for GREEN and
+    AMBER verdicts plus the expiry pin-fly window. None = no blueprint."""
+    ch = LAST_CHAINS.get((m["sym"], m["exp"]))
+    if not ch:
+        return None
+    ce, pe, step, spot = ch["ce"], ch["pe"], ch["step"], ch["spot"]
+    atm = ch["atm"]
+    em = m.get("straddle") or 0
+    wing = 3 * step
+
+    if call.startswith("GREEN - SELL"):
+        sc = _pick(ce.index, spot + em, +1)
+        sp = _pick(pe.index, spot - em, -1)
+        if not sc or not sp:
+            return None
+        lc = _pick(ce.index, sc + wing, +1) or max(
+            (k for k in ce.index if k > sc), default=None)
+        lp = _pick(pe.index, sp - wing, -1) or min(
+            (k for k in pe.index if k < sp), default=None)
+        legs_px = [_px(ce, sc), _px(ce, lc), _px(pe, sp), _px(pe, lp)]
+        if None in legs_px or not lc or not lp:
+            return None
+        credit = legs_px[0] - legs_px[1] + legs_px[2] - legs_px[3]
+        width = min(lc - sc, sp - lp)
+        if credit <= 0:
+            return None
+        return dict(name="Iron condor (short strikes beyond expected move)",
+                    legs=f"Sell {sp:.0f}P / Buy {lp:.0f}P · "
+                         f"Sell {sc:.0f}C / Buy {lc:.0f}C",
+                    cost=f"Est. net credit ≈ ₹{credit:,.0f} per lot-unit "
+                         "(EOD closes)",
+                    risk=f"Max risk ≈ ₹{width - credit:,.0f} per lot-unit",
+                    zone=f"Profit zone {sp - credit:,.0f} – {sc + credit:,.0f}"
+                         f" (walls: {m['pw'].split(';')[0]} / "
+                         f"{m['cw'].split(';')[0]})",
+                    mgmt=MGMT["condor"])
+
+    if call.startswith("GREEN - DEBIT"):
+        if trend == 1:
+            k2 = _pick(ce.index, spot + em, +1)
+            d = (_px(ce, atm) or 0) - (_px(ce, k2) or 0) if k2 else 0
+            if not k2 or d <= 0:
+                return None
+            return dict(name="Bull call spread (with trend + OI)",
+                        legs=f"Buy {atm:.0f}C / Sell {k2:.0f}C",
+                        cost=f"Est. net debit ≈ ₹{d:,.0f} per lot-unit",
+                        risk=f"Max risk = debit; max reward ≈ "
+                             f"₹{(k2 - atm) - d:,.0f}",
+                        zone=f"Breakeven ≈ {atm + d:,.0f}",
+                        mgmt=MGMT["debit"])
+        else:
+            k2 = _pick(pe.index, spot - em, -1)
+            d = (_px(pe, atm) or 0) - (_px(pe, k2) or 0) if k2 else 0
+            if not k2 or d <= 0:
+                return None
+            return dict(name="Bear put spread (with trend + OI)",
+                        legs=f"Buy {atm:.0f}P / Sell {k2:.0f}P",
+                        cost=f"Est. net debit ≈ ₹{d:,.0f} per lot-unit",
+                        risk=f"Max risk = debit; max reward ≈ "
+                             f"₹{(atm - k2) - d:,.0f}",
+                        zone=f"Breakeven ≈ {atm - d:,.0f}",
+                        mgmt=MGMT["debit"])
+
+    if call.startswith("AMBER - CALENDAR"):
+        # same-strike calendar: sell this (front) expiry ATM call, buy the
+        # next expiry's same strike.
+        back = None
+        for (s2, e2), c2 in LAST_CHAINS.items():
+            if s2 == m["sym"] and e2 > m["exp"]:
+                back = (e2, c2)
+                break
+        if not back:
+            return None
+        e2, c2 = back
+        f_px, b_px = _px(ce, atm), _px(c2["ce"], atm)
+        if f_px is None or b_px is None or b_px <= f_px:
+            return None
+        return dict(name="ATM call calendar (own cheap vol)",
+                    legs=f"Sell {atm:.0f}C ({m['exp']}) / "
+                         f"Buy {atm:.0f}C ({e2})",
+                    cost=f"Est. net debit ≈ ₹{b_px - f_px:,.0f} per lot-unit",
+                    risk="Max risk = net debit (defined)",
+                    zone=f"Profit peaks with spot pinned near {atm:,.0f} "
+                         "at front expiry",
+                    mgmt=MGMT["calendar"])
+
+    # expiry pin-fly: only when pinned tight to max pain with <=1 DTE
+    if m["dte"] <= 1 and m.get("max_pain") \
+            and abs(spot / m["max_pain"] - 1) < 0.003:
+        mp = _pick(ce.index, m["max_pain"], +1) or atm
+        lc, lp = _pick(ce.index, mp + wing, +1), _pick(pe.index, mp - wing, -1)
+        px = [_px(ce, mp), _px(pe, mp), _px(ce, lc), _px(pe, lp)]
+        if None in px or not lc or not lp:
+            return None
+        credit = px[0] + px[1] - px[2] - px[3]
+        if credit <= 0:
+            return None
+        return dict(name="Expiry pin iron fly (HALF SIZE - optional)",
+                    legs=f"Sell {mp:.0f} straddle / Buy {lp:.0f}P + {lc:.0f}C",
+                    cost=f"Est. net credit ≈ ₹{credit:,.0f} per lot-unit",
+                    risk=f"Max risk ≈ ₹{wing - credit:,.0f} per lot-unit",
+                    zone=f"Pin thesis: spot stays near max pain "
+                         f"{m['max_pain']:,.0f} into expiry",
+                    mgmt=MGMT["fly"])
+    return None
+
+
+def stock_blueprints(fo: pd.DataFrame, bridge: pd.DataFrame) -> pd.DataFrame:
+    """For liquid bridged stocks, derive a concrete bull-call-spread
+    expression of the equity accumulation signal."""
+    if bridge is None or bridge.empty:
+        return bridge
+    out = bridge.copy()
+    for col in ("structure", "cost", "invalidation"):
+        out[col] = ""
+    sto = fo[fo["typ"] == "STO"]
+    for sym in out.index:
+        if out.loc[sym, "liq"] == "C":
+            out.loc[sym, "structure"] = "— (illiquid: trade the cash instead)"
+            continue
+        o = sto[sto["sym"] == sym]
+        if o.empty:
+            continue
+        exp = sorted(o["exp"].unique())[0]
+        chn = o[o["exp"] == exp]
+        ce = chn[chn["opt"] == "CE"].groupby("k").agg(
+            close=("close", "max")).sort_index()
+        spot = chn["und"].dropna().iloc[0] if chn["und"].notna().any() \
+            else np.nan
+        if np.isnan(spot):
+            f = fo[(fo["typ"] == "STF") & (fo["sym"] == sym)]
+            spot = float(f["close"].iloc[0]) if len(f) else np.nan
+        if np.isnan(spot) or ce.empty:
+            continue
+        atm = min(ce.index, key=lambda k: abs(k - spot))
+        k2 = _pick(ce.index, spot * 1.07, +1)
+        d = (_px(ce, atm) or 0) - (_px(ce, k2) or 0) if k2 else 0
+        if not k2 or d <= 0 or k2 <= atm:
+            continue
+        out.loc[sym, "structure"] = (f"Bull call spread {atm:.0f}C/{k2:.0f}C "
+                                     f"({pd.Timestamp(exp).date()})")
+        out.loc[sym, "cost"] = (f"debit ≈ ₹{d:,.1f}/share · "
+                                f"max reward ≈ ₹{(k2 - atm) - d:,.1f}")
+        out.loc[sym, "invalidation"] = "close below 21 DMA = thesis off"
+    return out
