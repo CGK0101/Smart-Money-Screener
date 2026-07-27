@@ -64,6 +64,8 @@ border-radius:12px;padding:14px 16px;margin:14px 0">
 <span class="act {_vclass(v['call'])}" style="font-size:13px">
 {html.escape(v['call'])}</span></div>
 <div class="sub" style="margin:6px 0 10px">{html.escape(v['family'])}</div>
+{f'<div class="sub" style="margin:-4px 0 10px;color:#f59e0b">⚠ ' +
+ html.escape(v["why"]) + '</div>' if v.get('why') else ''}
 <div class="kpis">
 <div class="kpi"><b>{m['spot']:,.0f}</b><span>Spot (derived)</span></div>
 <div class="kpi"><b>{em}</b><span>Expected move to expiry</span></div>
@@ -115,6 +117,25 @@ class="{'pos' if r['fut_oi_chg_pct']>=0 else 'neg'}">
 </thead><tbody>{''.join(rows)}</tbody></table></div>"""
 
 
+def _fo_scorecard_section(sc) -> str:
+    if sc is None or sc.empty:
+        return ('<div class="empty">Verdict outcomes build as expiries '
+                'resolve - check back after the next expiry.</div>')
+    rows = "".join(
+        f'<tr><td>{html.escape(str(r["cat"]))}</td>'
+        f'<td>{int(r["resolved"])}</td>'
+        f'<td class="{"pos" if r["win_pct"]>=55 else ""}">'
+        f'{r["win_pct"]:.0f}%</td>'
+        f'<td>{r["move_vs_EM"]}x</td></tr>'
+        for _, r in sc.iterrows())
+    return f"""<div class="scrollx"><table><thead><tr><th>Category</th>
+<th>Resolved</th><th>Win rate</th><th>Avg |move| vs EM</th></tr></thead>
+<tbody>{rows}</tbody></table></div>
+<div class="sub" style="margin-top:6px">Win = move contained inside the
+straddle (selling/pin) or direction correct (debit). Move vs EM below 1.0
+= premium ran rich; above 1.0 = market out-moved the pricing.</div>"""
+
+
 def render_fo(fo: dict) -> str:
     d = fo["session"].strftime("%d %b %Y (%A)")
     boards = "".join(_board(b) for b in fo["boards"])
@@ -134,6 +155,9 @@ fixed small % per structure, always defined-risk, and skip any day that
 isn't green. The trades you don't take are where this page earns its keep.
 </div>
 {boards}
+<h2>Verdict scorecard — how past calls resolved</h2>
+{_fo_scorecard_section(fo.get('scorecard'))}
+
 <h2>Stock options bridge — today's equity signals with F&amp;O</h2>
 <div class="sub" style="margin-bottom:8px">Delivery accumulation (leg 1) +
 futures OI buildup + liquid options = candidate for a defined-risk spread
