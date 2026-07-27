@@ -23,7 +23,8 @@ def append_signals(res: dict) -> pd.DataFrame:
         for sym, r in df.iterrows():
             rows.append(dict(date=res["latest"].date().isoformat(),
                              symbol=sym, grade=grade, action=r["action"],
-                             score=int(r["score"]), close=float(r["close"])))
+                             score=int(r["score"]), close=float(r["close"]),
+                             structure=str(r.get("structure", ""))))
     today = pd.DataFrame(rows)
     if os.path.exists(SIGNALS_PATH):
         log = pd.read_csv(SIGNALS_PATH)
@@ -89,6 +90,29 @@ def scorecard(log: pd.DataFrame, history: pd.DataFrame) -> pd.DataFrame:
     if not recs:
         return pd.DataFrame()
     f = pd.DataFrame(recs)
+    # slice ACT signals by price-structure too, once structure is logged -
+    # this is what tells us WHERE the edge lives (base vs continuation)
+    if "structure" in sig.columns:
+        sig2 = sig[sig["action"].eq("ACT") & sig["structure"].notna()
+                   & (sig["structure"] != "") & (sig["structure"] != "nan")]
+        # recompute recs including a structure-tagged pseudo-action
+        for _, s in sig2.iterrows():
+            i = pos.get(s["date"])
+            if i is None or s["symbol"] not in closes.columns:
+                continue
+            base = closes.at[s["date"], s["symbol"]]
+            if pd.isna(base) or base <= 0:
+                continue
+            rec = dict(action=f"ACT · {s['structure']}")
+            for h in C.SCORECARD_HORIZONS:
+                if i + h < len(closes.index):
+                    px = closes.at[closes.index[i + h], s["symbol"]]
+                    if pd.notna(px):
+                        rec[f"r{h}"] = (px / base - 1) * 100
+                        rec[f"x{h}"] = rec[f"r{h}"] -                             (med.iloc[i + h] / med.iloc[i] - 1) * 100
+            if len(rec) > 1:
+                recs.append(rec)
+        f = pd.DataFrame(recs)
     out = []
     for a, gdf in f.groupby("action"):
         row = {"action": a, "signals": len(gdf)}
