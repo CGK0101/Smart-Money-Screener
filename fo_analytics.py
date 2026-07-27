@@ -224,12 +224,19 @@ def append_metrics(rows: list) -> pd.DataFrame:
 
 
 def _front_series(log: pd.DataFrame, sym: str) -> pd.DataFrame:
-    """Per-date front-expiry row for one index (for IV rank / trend / RV)."""
+    """Per-date front-expiry row for one index (for IV rank / trend / RV).
+    For IV purposes prefer the front row with dte>=2: sub-2-dte IV solves
+    are numerically unstable and were poisoning the IV-rank calibration."""
     s = log[log["sym"] == sym].copy()
     if s.empty:
         return s
-    s = s.sort_values(["date", "dte"]).groupby("date").first().reset_index()
-    return s.sort_values("date")
+    stable = s[s["dte"] >= 2]
+    pick = stable if len(stable) else s
+    out = pick.sort_values(["date", "dte"]).groupby("date").first()
+    # spot/trend should still use every session, even pure-expiry ones
+    allspot = s.sort_values(["date", "dte"]).groupby("date").first()["spot"]
+    out["spot"] = allspot.reindex(out.index).fillna(out["spot"])
+    return out.reset_index().sort_values("date")
 
 
 # ------------------------------------------------------------- verdicts
@@ -239,8 +246,11 @@ def verdict(row: dict, hist: pd.DataFrame) -> dict:
     checks, n = {}, len(hist)
     ivr = trend = rv = np.nan
     if n >= MIN_METRIC_ROWS_FOR_RANK and pd.notna(row["iv"]):
-        lo, hi = hist["iv"].min(), hist["iv"].max()
-        ivr = round((row["iv"] - lo) / (hi - lo) * 100, 0) if hi > lo else 50.0
+        # percentile rank over the trailing 60 clean IV prints - robust to
+        # the junk sub-4% solves that a min-max range is hostage to
+        clean = hist["iv"][(hist["iv"] > 4) & hist["iv"].notna()].tail(60)
+        if len(clean) >= MIN_METRIC_ROWS_FOR_RANK:
+            ivr = round((clean < row["iv"]).mean() * 100, 0)
     if n >= 6:
         px = hist["spot"].astype(float)
         rets = np.log(px / px.shift(1)).dropna().tail(5)
@@ -280,7 +290,16 @@ def verdict(row: dict, hist: pd.DataFrame) -> dict:
     debit_green = all(debit_checks.values())
     checks.update(debit_checks)
 
-    if sell_green:
+    pin_ok = row["dte"] <= 1 and row.get("max_pain") \
+        and abs(row["spot"] / row["max_pain"] - 1) < 0.003
+    checks["Expiry pin: spot within 0.3% of max pain (DTE<=1)"] = bool(pin_ok)
+
+    if pin_ok and n >= MIN_METRIC_ROWS_FOR_RANK:
+        call, family = "GREEN - EXPIRY PIN (half size)", \
+            ("Pin iron fly at max pain. Own-data calibration: at 0-2 DTE the "
+             "straddle has contained the actual move ~90% of the time - "
+             "near-expiry premium runs rich. Half size, defined risk.")
+    elif sell_green:
         call, family = "GREEN - SELL PREMIUM", \
             "Iron condor / iron fly; short strikes beyond +/- expected move"
     elif debit_green:
@@ -299,8 +318,23 @@ def verdict(row: dict, hist: pd.DataFrame) -> dict:
     if n < MIN_METRIC_ROWS_FOR_RANK:
         call, family = "STAND ASIDE (calibrating)", \
             f"IV history building: {n}/{MIN_METRIC_ROWS_FOR_RANK} sessions"
+
+    why = ""
+    if not call.startswith("GREEN") and pd.notna(ivr):
+        bits = [f"IV rank {ivr:.0f} (sell needs ≥{IVR_SELL_MIN}, "
+                f"debit needs ≤{IVR_DEBIT_MAX})"]
+        if pd.notna(rv) and pd.notna(row.get("iv")) and rv > 0:
+            bits.append(f"IV/RV {row['iv']/rv:.2f} (sell needs ≥"
+                        f"{IV_OVER_RV_MIN})")
+        if trend not in (1, -1):
+            bits.append("no 21D trend")
+        elif not checks.get("Futures OI supports trend"):
+            bits.append("futures OI not backing the trend")
+        if not walls_ok:
+            bits.append("spot outside OI walls")
+        why = "Blocking a green: " + "; ".join(bits)
     return dict(call=call, family=family, checks=checks, ivr=ivr, rv=rv,
-                trend=trend)
+                trend=trend, why=why)
 
 
 # ------------------------------------------------------------- expiry radar
@@ -380,7 +414,10 @@ def run_fo(session_date: dt.date, act_watch: list) -> dict | None:
         bp = build_blueprint(r, v["call"], v["trend"])
         boards.append(dict(metrics=r, verdict=v, radar=radar, blueprint=bp))
     bridge = stock_blueprints(fo, stock_bridge(fo, act_watch))
+    vlog = log_verdicts(boards, session_date)
+    sc = fo_scorecard(vlog, log)
     return dict(boards=boards, session=session_date, bridge=bridge,
+                scorecard=sc,
                 hist_days={s: len(_front_series(log, s)) for s in INDICES})
 
 
@@ -514,9 +551,9 @@ def build_blueprint(m: dict, call: str, trend) -> dict | None:
                          "at front expiry",
                     mgmt=MGMT["calendar"])
 
-    # expiry pin-fly: only when pinned tight to max pain with <=1 DTE
-    if m["dte"] <= 1 and m.get("max_pain") \
-            and abs(spot / m["max_pain"] - 1) < 0.003:
+    # expiry pin-fly: the EXPIRY PIN green, or legacy tight-pin fallback
+    if ("EXPIRY PIN" in call) or (m["dte"] <= 1 and m.get("max_pain")
+            and abs(spot / m["max_pain"] - 1) < 0.003):
         mp = _pick(ce.index, m["max_pain"], +1) or atm
         lc, lp = _pick(ce.index, mp + wing, +1), _pick(pe.index, mp - wing, -1)
         px = [_px(ce, mp), _px(pe, mp), _px(ce, lc), _px(pe, lp)]
@@ -573,3 +610,67 @@ def stock_blueprints(fo: pd.DataFrame, bridge: pd.DataFrame) -> pd.DataFrame:
                                 f"max reward ≈ ₹{(k2 - atm) - d:,.1f}")
         out.loc[sym, "invalidation"] = "close below 21 DMA = thesis off"
     return out
+
+
+# ------------------------------------------------------- verdict tracking
+VERDICTS_PATH = os.path.join(BASE, "data", "fo_verdicts.csv")
+
+
+def log_verdicts(boards: list, session_date: dt.date):
+    rows = [dict(date=session_date.isoformat(), sym=b["metrics"]["sym"],
+                 exp=b["metrics"]["exp"], dte=b["metrics"]["dte"],
+                 call=b["verdict"]["call"], spot=b["metrics"]["spot"],
+                 em=b["metrics"].get("straddle"),
+                 trend=b["verdict"].get("trend"))
+            for b in boards]
+    new = pd.DataFrame(rows)
+    if os.path.exists(VERDICTS_PATH):
+        log = pd.read_csv(VERDICTS_PATH)
+        log = log[log["date"] != session_date.isoformat()]
+        log = pd.concat([log, new], ignore_index=True)
+    else:
+        log = new
+    log.to_csv(VERDICTS_PATH, index=False)
+    return log
+
+
+def fo_scorecard(vlog: pd.DataFrame, mlog: pd.DataFrame) -> pd.DataFrame:
+    """Grade resolved verdicts against what the market actually did by
+    expiry. SELL/PIN greens win if the move stayed inside the straddle;
+    DEBIT greens win if direction was right; every day contributes to the
+    EM-calibration row."""
+    if vlog is None or vlog.empty or mlog is None or mlog.empty:
+        return pd.DataFrame()
+    spot_by = {sym: g.sort_values(["date", "dte"]).groupby("date")
+               .first()["spot"] for sym, g in mlog.groupby("sym")}
+    recs = []
+    for _, v in vlog.iterrows():
+        s = spot_by.get(v["sym"])
+        if s is None or pd.isna(v.get("em")) or not v["em"]:
+            continue
+        if v["exp"] > s.index[-1]:
+            continue  # expiry not reached yet
+        upto = s[(s.index >= v["date"]) & (s.index <= v["exp"])]
+        if len(upto) < 2:
+            continue
+        move = float(upto.iloc[-1]) - float(v["spot"])
+        ratio = abs(move) / float(v["em"])
+        call = str(v["call"])
+        if call.startswith("GREEN - SELL") or "EXPIRY PIN" in call:
+            cat, win = "GREEN premium-selling / pin", ratio <= 1.0
+        elif call.startswith("GREEN - DEBIT"):
+            cat = "GREEN debit-directional"
+            win = (move > 0 and v.get("trend") == 1) or \
+                  (move < 0 and v.get("trend") == -1)
+        elif call.startswith("AMBER"):
+            cat, win = "AMBER calendar/partial", ratio <= 1.0
+        else:
+            cat, win = "All days: EM calibration", ratio <= 1.0
+        recs.append(dict(cat=cat, win=bool(win), ratio=ratio))
+    if not recs:
+        return pd.DataFrame()
+    f = pd.DataFrame(recs)
+    return f.groupby("cat").agg(
+        resolved=("win", "size"),
+        win_pct=("win", lambda x: round(x.mean() * 100)),
+        move_vs_EM=("ratio", lambda x: round(x.mean(), 2))).reset_index()
