@@ -120,3 +120,8 @@ date,symbol,grade,action,score,close,structure
 2026-07-29,DREDGECORP,B,ACT,55,1102.4,Continuation
 2026-07-29,MEDICO,B,LATE,52,46.26,Extended
 2026-07-29,NESTLEIND,B,IGNORE,27,1503.3,Continuation
+2026-07-30,MEDIASSIST,A,IGNORE,24,357.45,Neutral
+2026-07-30,TI,B,ACT,68,467.1,Base accumulation
+2026-07-30,DEEPINDS,B,ACT,59,548.8,Continuation
+2026-07-30,SAGILITY,B,WATCH,50,45.98,Base accumulation
+2026-07-30,XCHANGING,B,WATCH,38,67.08,Base accumulation
