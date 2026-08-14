@@ -231,3 +231,5 @@ date,symbol,grade,action,score,close,structure
 2026-08-13,NIBE,A,IGNORE,31,1494.0,Neutral
 2026-08-13,FLAIR,B,ACT,66,254.75,Base accumulation
 2026-08-13,KAMATHOTEL,B,LATE,52,187.54,Extended
+2026-08-14,SOMANYCERA,B,ACT,62,522.65,Continuation
+2026-08-14,SURAJEST,B,WATCH,50,214.32,Base accumulation
