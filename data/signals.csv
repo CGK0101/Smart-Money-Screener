@@ -259,3 +259,6 @@ date,symbol,grade,action,score,close,structure
 2026-08-18,AMBER,B,WATCH,45,7350.0,Neutral
 2026-08-18,ATLANTAELE,B,IGNORE,32,1774.4,Continuation
 2026-08-18,GSFC,B,IGNORE,28,160.43,Base accumulation
+2026-08-19,SCPL,A,LATE,2,678.2,Extended
+2026-08-19,JUBLPHARMA,B,WATCH,58,868.0,Neutral
+2026-08-19,TIIL,B,IGNORE,20,3127.5,Continuation
