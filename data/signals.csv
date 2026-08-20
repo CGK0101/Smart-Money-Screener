@@ -262,3 +262,6 @@ date,symbol,grade,action,score,close,structure
 2026-08-19,SCPL,A,LATE,2,678.2,Extended
 2026-08-19,JUBLPHARMA,B,WATCH,58,868.0,Neutral
 2026-08-19,TIIL,B,IGNORE,20,3127.5,Continuation
+2026-08-20,JAYNECOIND,A,WATCH,52,93.68,Continuation
+2026-08-20,DCMSHRIRAM,A,WATCH,35,1079.7,Base accumulation
+2026-08-20,MARSONS,B,ACT,59,112.15,Neutral
