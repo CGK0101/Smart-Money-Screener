@@ -368,3 +368,5 @@ date,symbol,grade,action,score,close,structure
 2026-09-11,BANDHANBNK,A,ACT,58,176.52,Neutral
 2026-09-11,CORONA,B,ACT,59,2236.1,Continuation
 2026-09-16,FEDDERSHOL,B,ACT,62,50.81,Continuation
+2026-09-17,GEEKAYWIRE,A,LATE,52,33.46,Extended
+2026-09-17,FEDDERSHOL,B,WATCH,49,52.29,Continuation
