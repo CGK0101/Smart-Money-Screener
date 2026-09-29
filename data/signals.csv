@@ -424,3 +424,7 @@ date,symbol,grade,action,score,close,structure
 2026-09-28,MUKANDLTD,B,ACT,62,171.03,Continuation
 2026-09-28,PROZONER,B,WATCH,54,56.26,Neutral
 2026-09-28,SATIN,B,IGNORE,34,234.4,Continuation
+2026-09-29,SKYGOLD,A,WATCH,47,820.85,Continuation
+2026-09-29,CONTROLPR,A,WATCH,37,608.5,Base accumulation
+2026-09-29,INDGN,B,ACT,62,605.15,Continuation
+2026-09-29,SUNFLAG,B,LATE,51,464.3,Extended
