@@ -48,12 +48,12 @@ border:1px dashed var(--line);border-radius:10px}
 <div class="sub">Session: <b>15 Oct 2026 (Thursday)</b> · History: 300 trading days
 · Liquid EQ universe: 1530 stocks</div>
 <div class="kpis">
-<div class="kpi"><b>1</b><span>ACT tonight</span></div>
+<div class="kpi"><b>0</b><span>ACT tonight</span></div>
 <div class="kpi"><b>4</b><span>Grade A signals</span></div>
 <div class="kpi"><b>6</b><span>Grade B signals</span></div>
 <div class="kpi"><b>3</b>
 <span>In base zone</span></div>
-<div class="kpi"><b>0</b>
+<div class="kpi"><b>1</b>
 <span>Red-flagged</span></div></div>
 
 <h2>Grade A — price, volume &amp; delivery all rising 3 days</h2>
@@ -137,8 +137,8 @@ border:1px dashed var(--line);border-radius:10px}
 <th>Structure</th><th>Trend</th><th>RS</th><th>Seen 15d</th>
 <th>vs 52wH</th><th>Events (7d)</th><th>Check</th></tr></thead><tbody><tr>
 <td class="sym">AURUM</td>
-<td data-v="3"><span class="act a-act">ACT</span></td>
-<td data-v="62"><span class="badge s-md">62</span></td>
+<td data-v="0"><span class="act a-ign">IGNORE</span></td>
+<td data-v="60"><span class="badge s-md">60</span></td>
 <td data-v="239.1">₹239.10</td>
 <td data-v="4.81" class="pos">+4.8%</td>
 <td data-v="4.65">4.65x</td>
@@ -151,7 +151,7 @@ border:1px dashed var(--line);border-radius:10px}
 <td data-v="70.0">70</td>
 <td data-v="1">1x</td>
 <td data-v="-9.7">-10%</td>
-<td><span class="sub">—</span></td>
+<td><span class="ev ev-b">Bulk buy</span><span class="ev ev-r">Circular</span></td>
 <td><a class="lnk" target="_blank" href="https://www.screener.in/company/AURUM/">Fund</a> · <a class="lnk" target="_blank" href="https://in.tradingview.com/chart/?symbol=NSE%3AAURUM">Chart</a></td></tr><tr>
 <td class="sym">ZENSARTECH</td>
 <td data-v="2"><span class="act a-watch">WATCH</span></td>
@@ -374,7 +374,11 @@ A. Higher risk, earliest entry.</div>
 <div class="empty">Add your holdings to <b>data/holdings.txt</b> in the repo (one NSE symbol per line) to activate exit-footprint monitoring on your own portfolio.</div>
 
 <h2>Market-wide smart money events (last 7 days)</h2>
-<div class="empty">No notable disclosures in the window.</div>
+<div class="scrollx"><table><thead><tr><th>Symbol</th>
+<th>Flags</th><th>Detail</th></tr></thead><tbody><tr><td class="sym">ETERNAL</td>
+<td><span class="ev ev-b">Block</span></td>
+<td class="sub">Block deal: BOFA SECURITIES EUROPE SA | Block deal: GOLDMAN SACHS BANK EUROPE SE ODI</td></tr></tbody>
+</table></div>
 
 <div class="sub" style="margin-top:22px">Data: NSE bhavcopy &amp; corporate
 disclosures. Educational tool — not investment advice. Click any column
