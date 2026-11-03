@@ -1,6 +1,6 @@
 <!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>F&O Strategy Board — 02 Nov 2026 (Monday)</title><style>
+<title>F&O Strategy Board — 03 Nov 2026 (Tuesday)</title><style>
 :root{--bg:#0f1420;--card:#182032;--txt:#e8ecf4;--mut:#8b96ad;--line:#26304a;
 --grn:#22c55e;--red:#ef4444;--amb:#f59e0b;--blu:#3b82f6}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);
@@ -45,7 +45,7 @@ border:1px dashed var(--line);border-radius:10px}
 <div class="sub"><a class="lnk" href="index.html">← Equity Smart Money
 Screener</a></div>
 <h1>F&amp;O Strategy Board</h1>
-<div class="sub">Session: <b>02 Nov 2026 (Monday)</b> · IV history: NIFTY: 170 sessions · BANKNIFTY: 170 sessions</div>
+<div class="sub">Session: <b>03 Nov 2026 (Tuesday)</b> · IV history: NIFTY: 171 sessions · BANKNIFTY: 171 sessions</div>
 <div class="note"><b>Default state is STAND ASIDE.</b> A green light means
 every condition on the checklist passed together — high conviction through
 confluence, never certainty. No signal survives being oversized: risk a
@@ -56,77 +56,89 @@ isn't green. The trades you don't take are where this page earns its keep.
 border-radius:12px;padding:14px 16px;margin:14px 0">
 <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
 <div><span class="sym" style="font-size:18px">NIFTY</span>
-<span class="sub"> · expiry 2026-11-03 (DTE 1)</span></div>
-<span class="act a-ign" style="font-size:13px">
-STAND ASIDE</span></div>
-<div class="sub" style="margin:6px 0 10px">Edge not present. No trade IS the trade today.</div>
-<div class="sub" style="margin:-4px 0 10px;color:#f59e0b">⚠ Blocking a green: IV rank 100 (sell needs ≥60, debit needs ≤30); IV/RV 2.24 (sell needs ≥1.1); futures OI not backing the trend</div>
+<span class="sub"> · expiry 2026-11-03 (DTE 0)</span></div>
+<span class="act a-watch" style="font-size:13px">
+AMBER - CALENDAR ZONE</span></div>
+<div class="sub" style="margin:6px 0 10px">Cheap vol + range: calendars only, small size</div>
+<div class="sub" style="margin:-4px 0 10px;color:#f59e0b">⚠ Blocking a green: IV rank 0 (sell needs ≥60, debit needs ≤30); IV/RV 0.38 (sell needs ≥1.1); futures OI not backing the trend</div>
 <div class="kpis">
-<div class="kpi"><b>23,441</b><span>Spot (derived)</span></div>
-<div class="kpi"><b>±179 pts (±0.8%)</b><span>Expected move to expiry</span></div>
-<div class="kpi"><b>18.3%</b>
+<div class="kpi"><b>23,811</b><span>Spot (derived)</span></div>
+<div class="kpi"><b>±29 pts (±0.1%)</b><span>Expected move to expiry</span></div>
+<div class="kpi"><b>4.7%</b>
 <span>ATM IV</span></div>
-<div class="kpi"><b>100</b><span>IV rank</span></div>
-<div class="kpi"><b>8.2%</b><span>Realized vol 5D</span></div>
-<div class="kpi"><b>1.67</b>
+<div class="kpi"><b>0</b><span>IV rank</span></div>
+<div class="kpi"><b>12.3%</b><span>Realized vol 5D</span></div>
+<div class="kpi"><b>1.93</b>
 <span>PCR (OI)</span></div>
 <div class="kpi"><b>Up (vs 21D)</b><span>Trend</span></div>
-<div class="kpi"><b>23,250</b><span>Max pain</span></div>
+<div class="kpi"><b>23,700</b><span>Max pain</span></div>
 </div>
 <div style="display:flex;gap:24px;flex-wrap:wrap;margin:8px 0">
 <div><span class="sub">Put walls (support):</span>
-<b class="pos">23000 · 22500 · 22000</b></div>
+<b class="pos">23700 · 23650 · 23600</b></div>
 <div><span class="sub">Call walls (resistance):</span>
-<b class="neg">24000 · 23500 · 23600</b></div>
+<b class="neg">23850 · 23800 · 24000</b></div>
 <div><span class="sub">Fut OI chg:</span>
-<b>-460,525</b></div>
+<b>-1,201,330</b></div>
 </div>
-<div class="note"><b>⏱ Expiry radar (DTE 1):</b>
-spot is +0.82% from max pain 23,250
- · straddle -22.4% vs prev session.
+<div class="note"><b>⏱ Expiry radar (DTE 0):</b>
+spot is +0.47% from max pain 23,700
+ · straddle -92.1% vs prev session.
 Pin-risk territory - expiry trades only, defined risk, half size.</div>
-
+<div style="background:#0d2818;border:1px solid #1e5c38;
+border-radius:10px;padding:12px 14px;margin:10px 0">
+<div style="font-weight:800;color:#86efac;margin-bottom:4px">
+🎯 Strategy blueprint: ATM call calendar (own cheap vol)</div>
+<div><b>Sell 23800C (2026-11-03) / Buy 23800C (2026-11-09)</b></div>
+<div class="sub" style="margin:4px 0">Est. net debit ≈ ₹144 per lot-unit ·
+Max risk = net debit (defined)</div>
+<div class="sub">Profit peaks with spot pinned near 23,800 at front expiry</div>
+<div class="sub" style="margin-top:6px;border-top:1px solid #1e5c38;
+padding-top:6px"><b>Management:</b> Enter next session. Risk = net debit. Profit zone is spot pinned near the strike at front expiry. Close the whole structure BEFORE the front leg&#x27;s expiry day. Exit early if spot moves &gt; expected move from the strike.</div>
+<div class="sub" style="margin-top:4px;font-style:italic">Prices are EOD
+closes - re-quote live before entry. Strikes and thesis are the signal;
+your fill and size are yours.</div></div>
 <details><summary class="sub" style="cursor:pointer">Verdict checklist
-</summary><div style="columns:2;margin-top:6px"><div><span class="pos">✓</span> <span class="sub">IV rank available</span></div><div><span class="pos">✓</span> <span class="sub">IV rank &gt;= 60 (rich premium)</span></div><div><span class="pos">✓</span> <span class="sub">IV &gt; realized vol x1.1 (seller edge)</span></div><div><span class="pos">✓</span> <span class="sub">Spot inside OI walls (range-bound)</span></div><div><span class="neg">✗</span> <span class="sub">DTE &gt;= 2 (not pin-risk day)</span></div><div><span class="neg">✗</span> <span class="sub">IV rank &lt;= 30 (cheap premium)</span></div><div><span class="pos">✓</span> <span class="sub">Trend established (vs 21D)</span></div><div><span class="neg">✗</span> <span class="sub">Futures OI supports trend</span></div><div><span class="neg">✗</span> <span class="sub">Expiry pin: spot within 0.3% of max pain (DTE&lt;=1)</span></div>
+</summary><div style="columns:2;margin-top:6px"><div><span class="pos">✓</span> <span class="sub">IV rank available</span></div><div><span class="neg">✗</span> <span class="sub">IV rank &gt;= 60 (rich premium)</span></div><div><span class="neg">✗</span> <span class="sub">IV &gt; realized vol x1.1 (seller edge)</span></div><div><span class="pos">✓</span> <span class="sub">Spot inside OI walls (range-bound)</span></div><div><span class="neg">✗</span> <span class="sub">DTE &gt;= 2 (not pin-risk day)</span></div><div><span class="pos">✓</span> <span class="sub">IV rank &lt;= 30 (cheap premium)</span></div><div><span class="pos">✓</span> <span class="sub">Trend established (vs 21D)</span></div><div><span class="neg">✗</span> <span class="sub">Futures OI supports trend</span></div><div><span class="neg">✗</span> <span class="sub">Expiry pin: spot within 0.3% of max pain (DTE&lt;=1)</span></div>
 </div></details>
 </div><div style="background:var(--card);border:1px solid var(--line);
 border-radius:12px;padding:14px 16px;margin:14px 0">
 <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
 <div><span class="sym" style="font-size:18px">NIFTY</span>
-<span class="sub"> · expiry 2026-11-09 (DTE 7)</span></div>
+<span class="sub"> · expiry 2026-11-09 (DTE 6)</span></div>
 <span class="act a-act" style="font-size:13px">
 GREEN - SELL PREMIUM</span></div>
 <div class="sub" style="margin:6px 0 10px">Iron condor / iron fly; short strikes beyond +/- expected move</div>
 
 <div class="kpis">
-<div class="kpi"><b>23,441</b><span>Spot (derived)</span></div>
-<div class="kpi"><b>±372 pts (±1.6%)</b><span>Expected move to expiry</span></div>
-<div class="kpi"><b>14.4%</b>
+<div class="kpi"><b>23,811</b><span>Spot (derived)</span></div>
+<div class="kpi"><b>±375 pts (±1.6%)</b><span>Expected move to expiry</span></div>
+<div class="kpi"><b>15.3%</b>
 <span>ATM IV</span></div>
-<div class="kpi"><b>90</b><span>IV rank</span></div>
-<div class="kpi"><b>8.2%</b><span>Realized vol 5D</span></div>
-<div class="kpi"><b>0.96</b>
+<div class="kpi"><b>97</b><span>IV rank</span></div>
+<div class="kpi"><b>12.3%</b><span>Realized vol 5D</span></div>
+<div class="kpi"><b>1.14</b>
 <span>PCR (OI)</span></div>
 <div class="kpi"><b>Up (vs 21D)</b><span>Trend</span></div>
-<div class="kpi"><b>23,200</b><span>Max pain</span></div>
+<div class="kpi"><b>23,600</b><span>Max pain</span></div>
 </div>
 <div style="display:flex;gap:24px;flex-wrap:wrap;margin:8px 0">
 <div><span class="sub">Put walls (support):</span>
-<b class="pos">23000 · 22000 · 22800</b></div>
+<b class="pos">23000 · 22000 · 20500</b></div>
 <div><span class="sub">Call walls (resistance):</span>
-<b class="neg">24000 · 24500 · 23800</b></div>
+<b class="neg">24000 · 24500 · 25000</b></div>
 <div><span class="sub">Fut OI chg:</span>
-<b>-460,525</b></div>
+<b>-1,201,330</b></div>
 </div>
 
 <div style="background:#0d2818;border:1px solid #1e5c38;
 border-radius:10px;padding:12px 14px;margin:10px 0">
 <div style="font-weight:800;color:#86efac;margin-bottom:4px">
 🎯 Strategy blueprint: Iron condor (short strikes beyond expected move)</div>
-<div><b>Sell 23050P / Buy 22900P · Sell 23850C / Buy 24000C</b></div>
-<div class="sub" style="margin:4px 0">Est. net credit ≈ ₹41 per lot-unit (EOD closes) ·
-Max risk ≈ ₹109 per lot-unit</div>
-<div class="sub">Profit zone 23,009 – 23,891 (walls: 23000 / 24000)</div>
+<div><b>Sell 23400P / Buy 23250P · Sell 24200C / Buy 24350C</b></div>
+<div class="sub" style="margin:4px 0">Est. net credit ≈ ₹42 per lot-unit (EOD closes) ·
+Max risk ≈ ₹108 per lot-unit</div>
+<div class="sub">Profit zone 23,358 – 24,242 (walls: 23000 / 24000)</div>
 <div class="sub" style="margin-top:6px;border-top:1px solid #1e5c38;
 padding-top:6px"><b>Management:</b> Enter next session (re-quote live; EOD closes shift). Take profit at 50% of credit received. Hard exit if loss reaches 1x credit, or spot CLOSES beyond a short strike. Exit by 1 DTE regardless - never hold condors into expiry.</div>
 <div class="sub" style="margin-top:4px;font-style:italic">Prices are EOD
@@ -139,30 +151,30 @@ your fill and size are yours.</div></div>
 border-radius:12px;padding:14px 16px;margin:14px 0">
 <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
 <div><span class="sym" style="font-size:18px">BANKNIFTY</span>
-<span class="sub"> · expiry 2026-11-23 (DTE 21)</span></div>
+<span class="sub"> · expiry 2026-11-23 (DTE 20)</span></div>
 <span class="act a-ign" style="font-size:13px">
 STAND ASIDE</span></div>
 <div class="sub" style="margin:6px 0 10px">Edge not present. No trade IS the trade today.</div>
-<div class="sub" style="margin:-4px 0 10px;color:#f59e0b">⚠ Blocking a green: IV rank 67 (sell needs ≥60, debit needs ≤30); IV/RV 1.21 (sell needs ≥1.1); futures OI not backing the trend; spot outside OI walls</div>
+<div class="sub" style="margin:-4px 0 10px;color:#f59e0b">⚠ Blocking a green: IV rank 60 (sell needs ≥60, debit needs ≤30); IV/RV 1.16 (sell needs ≥1.1); futures OI not backing the trend; spot outside OI walls</div>
 <div class="kpis">
-<div class="kpi"><b>55,002</b><span>Spot (derived)</span></div>
-<div class="kpi"><b>±1,533 pts (±2.8%)</b><span>Expected move to expiry</span></div>
-<div class="kpi"><b>14.5%</b>
+<div class="kpi"><b>55,540</b><span>Spot (derived)</span></div>
+<div class="kpi"><b>±1,494 pts (±2.7%)</b><span>Expected move to expiry</span></div>
+<div class="kpi"><b>14.3%</b>
 <span>ATM IV</span></div>
-<div class="kpi"><b>67</b><span>IV rank</span></div>
-<div class="kpi"><b>12.0%</b><span>Realized vol 5D</span></div>
-<div class="kpi"><b>0.96</b>
+<div class="kpi"><b>60</b><span>IV rank</span></div>
+<div class="kpi"><b>12.4%</b><span>Realized vol 5D</span></div>
+<div class="kpi"><b>0.97</b>
 <span>PCR (OI)</span></div>
 <div class="kpi"><b>Up (vs 21D)</b><span>Trend</span></div>
-<div class="kpi"><b>55,500</b><span>Max pain</span></div>
+<div class="kpi"><b>55,600</b><span>Max pain</span></div>
 </div>
 <div style="display:flex;gap:24px;flex-wrap:wrap;margin:8px 0">
 <div><span class="sub">Put walls (support):</span>
 <b class="pos">58000 · 55000 · 54000</b></div>
 <div><span class="sub">Call walls (resistance):</span>
-<b class="neg">57000 · 58000 · 55000</b></div>
+<b class="neg">58000 · 57000 · 56000</b></div>
 <div><span class="sub">Fut OI chg:</span>
-<b>-71,820</b></div>
+<b>-14,100</b></div>
 </div>
 
 
@@ -173,30 +185,30 @@ STAND ASIDE</span></div>
 border-radius:12px;padding:14px 16px;margin:14px 0">
 <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
 <div><span class="sym" style="font-size:18px">BANKNIFTY</span>
-<span class="sub"> · expiry 2026-12-29 (DTE 57)</span></div>
+<span class="sub"> · expiry 2026-12-29 (DTE 56)</span></div>
 <span class="act a-ign" style="font-size:13px">
 STAND ASIDE</span></div>
 <div class="sub" style="margin:6px 0 10px">Edge not present. No trade IS the trade today.</div>
-<div class="sub" style="margin:-4px 0 10px;color:#f59e0b">⚠ Blocking a green: IV rank 58 (sell needs ≥60, debit needs ≤30); IV/RV 1.16 (sell needs ≥1.1); futures OI not backing the trend; spot outside OI walls</div>
+<div class="sub" style="margin:-4px 0 10px;color:#f59e0b">⚠ Blocking a green: IV rank 55 (sell needs ≥60, debit needs ≤30); IV/RV 1.11 (sell needs ≥1.1); futures OI not backing the trend; spot outside OI walls</div>
 <div class="kpis">
-<div class="kpi"><b>55,002</b><span>Spot (derived)</span></div>
-<div class="kpi"><b>±2,448 pts (±4.5%)</b><span>Expected move to expiry</span></div>
-<div class="kpi"><b>13.9%</b>
+<div class="kpi"><b>55,540</b><span>Spot (derived)</span></div>
+<div class="kpi"><b>±2,412 pts (±4.3%)</b><span>Expected move to expiry</span></div>
+<div class="kpi"><b>13.7%</b>
 <span>ATM IV</span></div>
-<div class="kpi"><b>58</b><span>IV rank</span></div>
-<div class="kpi"><b>12.0%</b><span>Realized vol 5D</span></div>
-<div class="kpi"><b>1.06</b>
+<div class="kpi"><b>55</b><span>IV rank</span></div>
+<div class="kpi"><b>12.4%</b><span>Realized vol 5D</span></div>
+<div class="kpi"><b>1.1</b>
 <span>PCR (OI)</span></div>
 <div class="kpi"><b>Up (vs 21D)</b><span>Trend</span></div>
-<div class="kpi"><b>56,800</b><span>Max pain</span></div>
+<div class="kpi"><b>57,000</b><span>Max pain</span></div>
 </div>
 <div style="display:flex;gap:24px;flex-wrap:wrap;margin:8px 0">
 <div><span class="sub">Put walls (support):</span>
 <b class="pos">57000 · 54000 · 56500</b></div>
 <div><span class="sub">Call walls (resistance):</span>
-<b class="neg">60000 · 57000 · 58000</b></div>
+<b class="neg">57000 · 60000 · 58000</b></div>
 <div><span class="sub">Fut OI chg:</span>
-<b>-71,820</b></div>
+<b>-14,100</b></div>
 </div>
 
 
@@ -207,7 +219,7 @@ STAND ASIDE</span></div>
 <h2>Verdict scorecard — how past calls resolved</h2>
 <div class="scrollx"><table><thead><tr><th>Category</th>
 <th>Resolved</th><th>Win rate</th><th>Avg |move| vs EM</th></tr></thead>
-<tbody><tr><td>AMBER calendar/partial</td><td>28</td><td class="pos">57%</td><td>0.87x</td></tr><tr><td>All days: EM calibration</td><td>120</td><td class="">41%</td><td>1.18x</td></tr><tr><td>GREEN debit-directional</td><td>44</td><td class="">30%</td><td>1.24x</td></tr><tr><td>GREEN premium-selling / pin</td><td>23</td><td class="pos">70%</td><td>0.77x</td></tr></tbody></table></div>
+<tbody><tr><td>AMBER calendar/partial</td><td>28</td><td class="pos">57%</td><td>0.87x</td></tr><tr><td>All days: EM calibration</td><td>124</td><td class="">40%</td><td>1.21x</td></tr><tr><td>GREEN debit-directional</td><td>44</td><td class="">30%</td><td>1.24x</td></tr><tr><td>GREEN premium-selling / pin</td><td>28</td><td class="pos">57%</td><td>1.16x</td></tr></tbody></table></div>
 <div class="sub" style="margin-top:6px">Win = move contained inside the
 straddle (selling/pin) or direction correct (debit). Move vs EM below 1.0
 = premium ran rich; above 1.0 = market out-moved the pricing.</div>
@@ -220,22 +232,22 @@ instead of cash. Grade C liquidity = slippage eats the edge.</div>
 <th>Fut OI chg</th><th>Opt value</th><th>Liq</th><th>Suggested structure</th>
 <th>Cost / reward (EOD)</th><th>Invalidation</th></tr>
 </thead><tbody><tr><td class="sym">GAIL</td>
-<td data-v="-3.2"
+<td data-v="-1.0"
 class="neg">
--3.2%</td>
-<td data-v="2665.6">₹2,666 cr</td>
+-1.0%</td>
+<td data-v="1665.6">₹1,666 cr</td>
 <td class="pos"><b>A</b></td>
-<td>Bull call spread 178C/190C (2026-11-23)</td>
-<td class="sub">debit ≈ ₹3.1/share · max reward ≈ ₹9.4</td>
+<td>Bull call spread 182C/195C (2026-11-23)</td>
+<td class="sub">debit ≈ ₹2.9/share · max reward ≈ ₹9.6</td>
 <td class="sub">close below 21 DMA = thesis off</td>
 </tr><tr><td class="sym">JINDALSTEL</td>
-<td data-v="6.3"
+<td data-v="1.4"
 class="pos">
-+6.3%</td>
-<td data-v="2186.0">₹2,186 cr</td>
++1.4%</td>
+<td data-v="691.3">₹691 cr</td>
 <td class="pos"><b>A</b></td>
-<td>Bull call spread 1100C/1180C (2026-11-23)</td>
-<td class="sub">debit ≈ ₹25.1/share · max reward ≈ ₹54.9</td>
+<td>Bull call spread 1100C/1200C (2026-11-23)</td>
+<td class="sub">debit ≈ ₹28.5/share · max reward ≈ ₹71.5</td>
 <td class="sub">close below 21 DMA = thesis off</td>
 </tr></tbody></table></div>
 <div class="sub" style="margin-top:22px">EOD analysis from the NSE F&amp;O
