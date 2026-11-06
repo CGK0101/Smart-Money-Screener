@@ -627,7 +627,7 @@ date,symbol,grade,action,score,close,structure
 2026-11-06,SBFC,A,IGNORE,32,91.99,Base accumulation
 2026-11-06,FEDERALBNK,A,IGNORE,14,340.1,Continuation
 2026-11-06,ORIENTELEC,A,IGNORE,12,199.62,Neutral
-2026-11-06,GROWW,B,ACT,62,215.08,Continuation
+2026-11-06,GROWW,B,IGNORE,60,215.08,Continuation
 2026-11-06,GPTHEALTH,B,ACT,58,143.93,Neutral
 2026-11-06,IOC,B,ACT,58,146.25,Base accumulation
 2026-11-06,SFL,B,WATCH,58,530.6,Neutral
