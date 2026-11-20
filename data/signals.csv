@@ -681,3 +681,6 @@ date,symbol,grade,action,score,close,structure
 2026-11-19,DELHIVERY,B,ACT,68,456.7,Base accumulation
 2026-11-19,PARKHOTELS,B,WATCH,43,102.99,Neutral
 2026-11-19,SIMPLEXINF,B,WATCH,42,302.2,Continuation
+2026-11-20,WINDMACHIN,A,ACT,62,321.2,Continuation
+2026-11-20,IGL,A,IGNORE,32,154.79,Base accumulation
+2026-11-20,KOHINOOR,B,LATE,52,31.83,Extended
