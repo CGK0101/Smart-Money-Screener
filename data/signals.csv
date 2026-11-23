@@ -684,3 +684,7 @@ date,symbol,grade,action,score,close,structure
 2026-11-20,WINDMACHIN,A,ACT,62,321.2,Continuation
 2026-11-20,IGL,A,IGNORE,32,154.79,Base accumulation
 2026-11-20,KOHINOOR,B,LATE,52,31.83,Extended
+2026-11-23,ICICIGI,A,WATCH,46,1742.6,Base accumulation
+2026-11-23,PRESTIGE,B,ACT,62,1687.0,Continuation
+2026-11-23,DABUR,B,ACT,58,399.0,Neutral
+2026-11-23,MARUTI,B,IGNORE,32,14010.0,Neutral
